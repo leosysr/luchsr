@@ -37,6 +37,12 @@ import { createRoot } from "react-dom/client";
 
 import App from "../App";
 import "../styles/index.css";
+// Die verbindliche Version, direkt aus der einen Stelle die sie führt. Sie hier
+// als Zahl hinzuschreiben hiesse, sie bei jedem Release nachzuziehen — und
+// genau das würde vergessen, weil sie in den aufgenommenen Bildern nicht
+// vorkommt. Der Import ist unbedenklich: diese Datei landet nicht im
+// Auslieferungsbau.
+import tauriConf from "../../src-tauri/tauri.conf.json";
 import type {
   AboutInfo,
   BuiltinSoundInfo,
@@ -283,7 +289,7 @@ const OUTCOME: LoadOutcome = {
 };
 
 const ABOUT: AboutInfo = {
-  version: "1.2.0",
+  version: tauriConf.version,
   projectUrl: "https://github.com/leosysr/luchsr",
 };
 
