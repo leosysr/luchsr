@@ -258,6 +258,14 @@ pub fn watch_focus<R: Runtime>(window: &tauri::WebviewWindow<R>) {
             return;
         }
         if let Some(window) = handle.get_webview_window(POPUP_LABEL) {
+            // Ist das Fenster schon verborgen, ist der Fokusverlust die Folge
+            // des Verbergens und nicht sein Anlass — das passiert nach einem
+            // Klick auf den Schliessknopf. Hier trotzdem `note_auto_hide` zu
+            // rufen würde die Gnadenfrist setzen, und ein sofortiger Klick auf
+            // das Tray-Icon bliebe wirkungslos.
+            if !window.is_visible().unwrap_or(false) {
+                return;
+            }
             state.note_auto_hide();
             let _ = window.hide();
         }

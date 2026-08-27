@@ -121,10 +121,11 @@ for (const state of TRAY_STATES) {
  * Die Augen sind hier sichtbar — anders als beim 16-px-Tray-Icon, wo sie unter
  * 2 px lägen und matschen würden.
  *
- * `app-64.png` ist ein anderer Fall: es steht in der Registry unter `IconUri`
- * und erscheint klein in der Kopfzeile des Toasts, neben dem Namen der
- * sendenden Anwendung. Deshalb trägt es die Markenfarbe und keinen Zustand —
- * es beantwortet „wer meldet das", nicht „wie schlimm ist es".
+ * Die Kopfzeile des Toasts trägt bewusst KEIN Symbol: ein grünes Markensymbol
+ * neben einer roten Zustandsfläche liest sich widersprüchlich, weil Grün in
+ * diesem Programm „OK" heisst. Es der Farbe folgen zu lassen ginge nicht — das
+ * Symbol kommt aus einer Datei für die ganze Anwendung, und das Info-Center
+ * zeichnet alte Toasts daraus neu. Siehe src/notify/toast.rs.
  *
  * `disconnected` fehlt bewusst: nach einem Fehlversuch wird nicht gemeldet
  * (D62), es gäbe also nie einen Toast in diesem Zustand. Ein Logo dafür wären
@@ -150,7 +151,6 @@ for (const state of TRAY_STATES.filter((s) => s.key !== "disconnected")) {
   );
 }
 
-write(join(TOAST_DIR, "app-64.png"), appPng(64), "Kopfzeile des Toasts");
 
 /* ------------------------------------------------------------- Ausgabe ---- */
 

@@ -23,8 +23,8 @@
 //!
 //! ```text
 //! +--------------------------------------------+
-//! | [Luchs]  Luchsr                          x |  Name und Symbol aus der
-//! | +------+                                   |  Registry, siehe `identity`
+//! | Luchsr                                   x |  Absender aus der Registry,
+//! | +------+                                   |  siehe `identity`
 //! | |Luchs |  CRIT  srv01 - Festplatte /var    |  Kopfzeile, fett
 //! | | auf  |  DISK CRITICAL - free space 2%    |  erste Rumpfzeile
 //! | |Farbe |  (war WARN)                       |  zweite Rumpfzeile
@@ -39,10 +39,23 @@
 //! Der Zustand steht **zusätzlich als Text** in der Kopfzeile. Das ist keine
 //! Doppelung, sondern die Regel des Projekts: Status wird nie allein über
 //! Farbe kodiert.
+//!
+//! ## Warum die Kopfzeile kein Symbol trägt
+//!
+//! Sie hatte eines, in der Markenfarbe Mint. Nebeneinander war das verwirrend:
+//! ein grünes Symbol neben einer roten Fläche, und Grün heisst in diesem
+//! Programm „OK". Genau **ein** farbiges Element, und das bedeutet eine Sache.
+//!
+//! Das Symbol der Zustandsfarbe folgen zu lassen wäre die andere Richtung
+//! gewesen — und wäre falsch: es kommt aus `IconUri` der AppUserModelID, also
+//! aus **einer** Datei für die ganze Anwendung. Das Info-Center zeichnet alte
+//! Toasts daraus neu. Alle vergangenen Meldungen trügen damit die aktuelle
+//! Farbe: ein CRIT von vor zehn Minuten stünde nach der Entwarnung in Grün.
+//! Das ist der Fehler aus D26 in anderer Gestalt.
 
 use std::fs;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use tauri_winrt_notification::{Duration, IconCrop, Toast};
 
@@ -88,9 +101,8 @@ static LOGOS: &[Logo] = &[
     logo!("unknown"),
 ];
 
-/// Dateiname des Symbols für die Kopfzeile.
-const APP_LOGO: &str = "app-64.png";
-static APP_LOGO_DATA: &[u8] = include_bytes!("../../icons/toast/app-64.png");
+/// Dateiendung der Logos. Steht hier, weil `extract` danach aufräumt.
+const LOGO_EXT: &str = "png";
 
 /// Welches Zustandslogo zu einem Ereignis gehört.
 ///
@@ -153,14 +165,21 @@ pub fn body_lines(body: &str) -> (&str, &str) {
 /// jedem Start sinnlos 16 KB geschrieben werden.
 pub fn extract(dir: &Path) -> io::Result<()> {
     fs::create_dir_all(dir)?;
+
+    let mut gewollt = Vec::with_capacity(LOGOS.len());
     for logo in LOGOS {
-        write_if_different(
-            &dir.join(format!("{}-{LOGO_SIZE}.png", logo.key)),
-            logo.data,
-        )?;
+        let name = logo_file(logo.key);
+        write_if_different(&dir.join(&name), logo.data)?;
+        gewollt.push(name);
     }
-    write_if_different(&dir.join(APP_LOGO), APP_LOGO_DATA)?;
+
+    remove_orphans(dir, &gewollt);
     Ok(())
+}
+
+/// Dateiname eines Logos.
+fn logo_file(key: &str) -> String {
+    format!("{key}-{LOGO_SIZE}.{LOGO_EXT}")
 }
 
 fn write_if_different(path: &Path, data: &[u8]) -> io::Result<()> {
@@ -170,9 +189,36 @@ fn write_if_different(path: &Path, data: &[u8]) -> io::Result<()> {
     fs::write(path, data)
 }
 
-/// Pfad des Symbols für die Kopfzeile, wie er in die Registry gehört.
-pub fn app_logo_path(dir: &Path) -> PathBuf {
-    dir.join(APP_LOGO)
+/// Räumt Bilder weg, die dieses Modul nicht mehr auslegt.
+///
+/// Dasselbe Vorgehen wie bei den Klängen in `make-sounds.mjs`, und aus
+/// demselben Grund: eine frühere Fassung legte hier ein `app-64.png` für die
+/// Toast-Kopfzeile ab. Ohne diesen Schritt bliebe es liegen, ohne dass es
+/// jemand noch erklären könnte. Eine Namensliste veralteter Dateien zu pflegen
+/// wäre die Alternative — die wäre nach der zweiten Änderung ein Friedhof.
+///
+/// Fehler werden übergangen: das Auslegen ist gelungen, und ein nicht
+/// gelöschter Rest ist kein Grund, den Start zu behelligen.
+fn remove_orphans(dir: &Path, gewollt: &[String]) {
+    let Ok(inhalt) = fs::read_dir(dir) else {
+        return;
+    };
+    for eintrag in inhalt.flatten() {
+        let pfad = eintrag.path();
+        if pfad.extension().and_then(|e| e.to_str()) != Some(LOGO_EXT) {
+            continue;
+        }
+        let Some(name) = pfad.file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
+        if gewollt.iter().any(|g| g == name) {
+            continue;
+        }
+        match fs::remove_file(&pfad) {
+            Ok(()) => log::info!("verwaistes Toast-Logo entfernt: {name}"),
+            Err(fehler) => log::debug!("verwaistes Toast-Logo {name} bleibt liegen: {fehler}"),
+        }
+    }
 }
 
 /// Schickt einen Toast.
@@ -183,7 +229,7 @@ pub fn send(
 ) -> Result<(), tauri_winrt_notification::Error> {
     let (zeile1, zeile2) = body_lines(&event.body);
     let key = logo_key(event.kind, event.state);
-    let logo = dir.join(format!("{key}-{LOGO_SIZE}.png"));
+    let logo = dir.join(logo_file(key));
 
     let mut toast = Toast::new(aumid)
         .title(&event.title)
@@ -218,8 +264,12 @@ pub fn send(
 /// behält — zwei Wege zu demselben Ordner wären zwei Stellen, die auseinander
 /// laufen können.
 #[cfg(test)]
-fn asset_dir_fuer_test(identifier: &str) -> Option<PathBuf> {
-    std::env::var_os("LOCALAPPDATA").map(|base| PathBuf::from(base).join(identifier).join("assets"))
+fn asset_dir_fuer_test(identifier: &str) -> Option<std::path::PathBuf> {
+    std::env::var_os("LOCALAPPDATA").map(|base| {
+        std::path::PathBuf::from(base)
+            .join(identifier)
+            .join("assets")
+    })
 }
 
 #[cfg(test)]
@@ -279,7 +329,6 @@ mod tests {
         for logo in LOGOS {
             assert!(logo.data.starts_with(&PNG), "{} ist kein PNG", logo.key);
         }
-        assert!(APP_LOGO_DATA.starts_with(&PNG));
     }
 
     #[test]
@@ -321,20 +370,61 @@ mod tests {
 
         extract(&dir).expect("erstes Auspacken");
         for logo in LOGOS {
-            let pfad = dir.join(format!("{}-{LOGO_SIZE}.png", logo.key));
+            let pfad = dir.join(logo_file(logo.key));
             assert_eq!(fs::read(&pfad).expect("Logo lesbar"), logo.data);
         }
-        assert!(app_logo_path(&dir).is_file());
 
         // Zweites Auspacken darf nichts anfassen: der Zeitstempel bleibt.
-        let vorher = fs::metadata(app_logo_path(&dir))
+        let probe = dir.join(logo_file("crit"));
+        let vorher = fs::metadata(&probe)
             .and_then(|m| m.modified())
             .expect("Zeitstempel");
         extract(&dir).expect("zweites Auspacken");
-        let nachher = fs::metadata(app_logo_path(&dir))
+        let nachher = fs::metadata(&probe)
             .and_then(|m| m.modified())
             .expect("Zeitstempel");
         assert_eq!(vorher, nachher, "unverändert darf nicht geschrieben werden");
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// Der Fall, für den `remove_orphans` da ist: eine frühere Fassung legte
+    /// hier ein `app-64.png` für die Toast-Kopfzeile ab. Es soll verschwinden.
+    #[test]
+    fn ein_verwaistes_bild_wird_weggeraeumt() {
+        let dir = std::env::temp_dir().join("luchsr-selbsttest-toast-verwaist");
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).expect("Verzeichnis");
+
+        let altlast = dir.join("app-64.png");
+        fs::write(&altlast, "alt").expect("Vorlauf");
+
+        extract(&dir).expect("Auspacken");
+        assert!(!altlast.exists(), "app-64.png liegt noch da");
+
+        // Die gewollten Logos sind trotzdem alle da.
+        for logo in LOGOS {
+            assert!(dir.join(logo_file(logo.key)).is_file(), "{}", logo.key);
+        }
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// Fremde Dateien gehen das Modul nichts an — nur Bilder räumt es auf.
+    #[test]
+    fn fremde_dateien_bleiben_liegen() {
+        let dir = std::env::temp_dir().join("luchsr-selbsttest-toast-fremd");
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).expect("Verzeichnis");
+
+        let fremd = dir.join("notizen.txt");
+        fs::write(&fremd, "nicht anfassen").expect("Vorlauf");
+
+        extract(&dir).expect("Auspacken");
+        assert_eq!(
+            fs::read_to_string(&fremd).ok().as_deref(),
+            Some("nicht anfassen")
+        );
 
         let _ = fs::remove_dir_all(&dir);
     }
@@ -368,7 +458,7 @@ mod tests {
         let dir = asset_dir_fuer_test(AUMID).expect("LOCALAPPDATA");
         extract(&dir).expect("Logos auspacken");
 
-        let soll = super::super::identity::desired("Luchsr", &app_logo_path(&dir));
+        let soll = super::super::identity::desired("Luchsr");
         super::super::identity::reconcile(AUMID, &soll).expect("Identität eintragen");
 
         let faelle = [

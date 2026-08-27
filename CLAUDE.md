@@ -119,7 +119,7 @@ Luchsr/
     │   └── default.json       Berechtigungen, pro Slice erweitert
     ├── icons/                 App-Icon 32/128/256/512 + icon.ico
     │   ├── tray/              sechs Zustände × 16 und 32 px (Slice 5)
-    │   └── toast/             fünf Zustände × 192 px + app-64.png, ins Binary eingebaut
+    │   └── toast/             fünf Zustände × 192 px, ins Binary eingebaut
     ├── sounds/                ERZEUGT — 24 WAV, scripts/make-sounds.mjs, ins Binary eingebaut
     └── src/
         ├── main.rs            windows_subsystem = "windows" im Release
@@ -463,6 +463,11 @@ Alles variabel, **keine hartkodierten Werte** — jeder Parameter ist im Einstel
 | D95 | **Gefundener Fehler:** `problem_event` setzte ausnahmslos `EventKind::Critical`. `EventKind::Warning` wurde von `decide` **nie** erzeugt | Eine neue WARN oder UNKNOWN bekam damit den Klang für Kritisches, und die Auswahl „Warnung" in den Einstellungen war ohne jede Wirkung. Die Zuordnung stand seit Slice 8 im Doc-Kommentar von `EventKind` und nie im Code. Unentdeckt blieb es, weil die Klangtests ihre Ereignisse von Hand bauen: die Naht zwischen `decide` und `loudest` war nie durchlaufen. Aufgefallen ist es erst, als das Logo dieselbe Stufe brauchte. Jetzt steht die Zuordnung in `kind_of`, und ein Test prüft sie **durch `decide` hindurch** statt an einem selbstgebauten Ereignis |
 | D96 | Die Sammelmeldung trägt Stufe und Farbe des **dringlichsten** übergangenen Ereignisses | Sie hatte vorher gar keine Stufe — als Titel „Luchsr" und einen Rumpf. Mit einem farbigen Logo wäre sie ohne Zustand grün geworden: eine Entwarnung im Aussehen, hinter der fünfundzwanzig kritische Probleme stehen. Das ist die Fehlinformation aus D26 in anderer Gestalt |
 | D97 | Ein `#[ignore]`-Test schickt **echte** Toasts zum Ansehen | Ob ein Toast richtig *aussieht*, kann keine Zusicherung beantworten — das entscheidet das Auge, und zwar an einem echten Toast. Ein Test, der ungefragt Benachrichtigungen auf den Bildschirm wirft, gehört aber nicht in einen Durchlauf, den jemand nebenbei startet, und auf einem Bauläufer sieht ohnehin niemand hin. Also ein Werkzeug, kein Wächter: `cargo test -- --ignored toast_augenschein`. Dieselbe Haltung wie bei der Bildmarke — jede Runde wurde gerastert und angesehen, nicht beschrieben |
+| D98 | Die Toast-**Kopfzeile trägt kein Symbol**. `IconUri` wird nicht gesetzt — und ein bestehender Eintrag wird **entfernt** | Sie trug eines in der Markenfarbe Mint. Nebeneinander war das verwirrend: ein grünes Symbol neben einer roten Zustandsfläche, und Grün heisst in diesem Programm „OK". Genau **ein** farbiges Element, und das bedeutet eine Sache. Das Symbol der Zustandsfarbe folgen zu lassen wäre die andere Richtung gewesen und ist **falsch**: es kommt aus einer Datei für die ganze Anwendung, und das Info-Center zeichnet alte Toasts daraus neu — alle vergangenen Meldungen trügen die aktuelle Farbe, ein CRIT von vor zehn Minuten stünde nach der Entwarnung in Grün. Das ist D26 in anderer Gestalt. Fünf Kandidaten wurden gerastert und auf hellem **und** dunklem Toast-Grund angesehen, in 16, 24 und 64 px; die Wahl fiel nach dem Bild, nicht nach der Beschreibung |
+| D99 | `identity::reconcile` **entfernt** verwaltete Werte, die nicht mehr gewollt sind; die Liste `MANAGED` ist getrennt von `desired` | Ein Abgleich, der nur schreibt, hinterlässt Reste. `IconUri` stand nach D92 in der Registry; hätte D98 ihn bloss nicht mehr geschrieben, zeigte Windows weiter ein Symbol, das niemand mehr angefordert hat — auf jedem Rechner, auf dem die alte Fassung einmal lief. `MANAGED` führt **alle** je verwalteten Namen, damit das auch für die nächste Änderung gilt. Nicht verwaltete Werte bleiben unangetastet: der Schlüssel gehört Windows, nicht diesem Modul, und ein Test hält das fest |
+| D100 | `toast::extract` räumt **verwaiste Bilder** im Zielverzeichnis weg, statt eine Liste veralteter Dateinamen zu pflegen | Dasselbe Vorgehen wie `make-sounds.mjs` bei den Klängen. Eine Namensliste wäre nach der zweiten Änderung ein Friedhof; „alles, was kein aktuelles Logo ist" bleibt richtig, ohne gepflegt zu werden. Angefasst werden nur `.png` in einem Verzeichnis, das das Modul selbst anlegt — eine fremde Datei daneben bleibt liegen, und ein Test prüft das. Fehler beim Löschen werden übergangen: das Auslegen ist gelungen, und ein Rest ist kein Grund, den Start zu behelligen |
+| D101 | **Gefundener Fehler:** der Schliessknopf tat nichts. `core:window:default` enthält **ausschliesslich lesende** Fensterbefehle — `allow-hide` ist nicht dabei | `getCurrentWindow().hide()` wurde von der Berechtigungsprüfung abgelehnt. Die Ablehnung kam als abgewiesenes Promise zurück, und das vorangestellte `void` warf sie weg: der Knopf tat nichts und hinterliess **keine Spur**, nicht einmal im Protokoll. Behoben als Befehl `hide_popup` im Backend, nicht durch Öffnen der Kapazität: das Fenster wird an drei Stellen verborgen — Tray-Klick, Fokusverlust, Schliessknopf — und die gehören in eine Hand. Der Fehler wird jetzt angezeigt. Die Lehre ist allgemeiner als der Fall: `void` auf einem Promise ist eine Entscheidung, Fehler nicht zu sehen |
+| D102 | Der Fokusverlust-Behandler prüft, ob das Fenster **überhaupt noch sichtbar** ist, bevor er die Gnadenfrist setzt | Das Verbergen löst selbst einen Fokusverlust aus. Ohne die Abfrage setzte der Behandler danach die Frist aus D37, und ein sofortiger Klick auf das Tray-Icon nach dem Schliessknopf wäre wirkungslos geblieben — man hätte zweimal klicken müssen, um das Fenster wiederzubekommen. Aufgefallen beim Lesen, nicht beim Ausprobieren: der Fall braucht zwei Klicks in 300 ms |
 
 ### Konsequenz aus D9 — prüfbare Invariante
 
@@ -511,6 +516,26 @@ wird, während er läuft.** `scripts/third-party.ps1` hat `tauri dev` einmal
 abgeschossen: Vites Chokidar bekam `EBUSY: resource busy or locked, watch
 'THIRD-PARTY.md'` und beendete den Prozess. Erzeugte Dateien deshalb bei
 gestopptem Dev-Server schreiben.
+
+**`core:default` erlaubt keine mutierenden Fensterbefehle.** In `core:window:default`
+stehen ausschliesslich **lesende**: `allow-is-visible`, `allow-inner-size`,
+`allow-theme` und so weiter. `allow-hide`, `allow-show` und `allow-set-focus`
+sind **nicht** dabei. Ein `getCurrentWindow().hide()` aus dem Frontend wird
+abgelehnt — und zwar als abgewiesenes Promise, nicht als Ausnahme. Steht davor
+ein `void`, verschwindet die Ablehnung, und der Knopf tut still nichts. Genau
+das ist beim Schliessknopf passiert, siehe D101.
+
+Nachsehen lässt sich der Inhalt eines Berechtigungssatzes im erzeugten
+Manifest:
+
+```bash
+node -e "const m=require('./src-tauri/gen/schemas/acl-manifests.json'); console.log(m['core:window'].default_permission.permissions.join('\n'))"
+```
+
+**`void` auf einem Promise ist eine Entscheidung, Fehler nicht zu sehen.** In
+dieser Anwendung gibt es keine Konsole, in die eine unbehandelte Ablehnung
+fallen könnte. Jeder Aufruf ins Backend gehört deshalb mit `.catch` versehen —
+lieber eine Fehlermeldung im Fenster als ein Knopf, der nichts tut.
 
 **Vite 8 liefert esbuild nicht mehr mit.** `build.minify: "esbuild"` bricht ab
 („Cannot find package 'esbuild'"). Vite 8 minifiziert über Rolldown/oxc — die
@@ -617,6 +642,9 @@ Nach Slice 10:
 
 - **Release über CI** — Tag löst Bau und Veröffentlichung aus, mit Prüfsummen (D87–D90)
 - **Toasts mit eigener Identität** — Name, Symbol und farbiges Zustandslogo statt „Windows PowerShell"; dabei ein Fehler in der Stufenzuordnung gefunden und behoben (D91–D97). 407 Rust-Tests, 47 Frontend-Tests
+- **Kopfsymbol und Schliessknopf** — Toast-Kopfzeile ohne Symbol, damit nur ein
+  Element Farbe trägt; dabei fiel auf, dass das × nie funktioniert hat (D98–D102).
+  412 Rust-Tests, 47 Frontend-Tests
 
 ## Bei Unklarheit
 

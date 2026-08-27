@@ -157,6 +157,7 @@ pub fn run() {
             commands::refresh_now,
             commands::open_in_checkmk,
             commands::set_pin_popup,
+            commands::hide_popup,
             commands::export_csv,
             commands::action_comment,
             commands::acknowledge,
@@ -191,21 +192,19 @@ fn initialise_toast_identity(app: &tauri::AppHandle) {
     }
 
     let aumid = &app.config().identifier;
-    let soll = notify::identity::desired(
-        &app.package_info().name,
-        &notify::toast::app_logo_path(&dir),
-    );
+    let soll = notify::identity::desired(&app.package_info().name);
 
     match notify::identity::reconcile(aumid, &soll) {
-        // Was geschrieben wurde, gehört ins Protokoll: sonst fällt eine
-        // Abweichung nie auf, und genau daran ist der Autostart einmal
-        // gescheitert (D80).
-        Ok(geschrieben) if geschrieben.is_empty() => {
+        // Was geschehen ist, gehört ins Protokoll: sonst fällt eine Abweichung
+        // nie auf, und genau daran ist der Autostart einmal gescheitert (D80).
+        Ok(ergebnis) if ergebnis.is_empty() => {
             log::debug!("Benachrichtigungs-Identität {aumid} stand bereits richtig")
         }
-        Ok(geschrieben) => {
-            log::info!("Benachrichtigungs-Identität {aumid} gesetzt: {geschrieben:?}")
-        }
+        Ok(ergebnis) => log::info!(
+            "Benachrichtigungs-Identität {aumid}: geschrieben {:?}, entfernt {:?}",
+            ergebnis.written,
+            ergebnis.removed
+        ),
         Err(fehler) => log::warn!("Benachrichtigungs-Identität {aumid} nicht eintragbar: {fehler}"),
     }
 }
