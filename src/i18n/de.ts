@@ -22,6 +22,16 @@ export const de = {
   "about.license": "MIT-Lizenz",
   "about.ai":
     "Entwickelt mit Claude von Anthropic. Entwürfe, Quelltext und Tests entstanden im Dialog mit einem KI-Modell; Auftrag, Entscheidungen und Prüfung liegen beim Autor.",
+  "update.check": "Nach Updates suchen",
+  "update.checking": "Wird nachgesehen …",
+  "update.upToDate": "Diese Fassung ist die aktuelle.",
+  // Ohne Platzhalter: die Version wird als eigenes Element in Mono angehängt,
+  // wie alle technischen Werte.
+  "update.available": "Neuere Fassung verfügbar:",
+  "update.ahead": "Diese Fassung ist neuer als das jüngste Release:",
+  "update.openRelease": "Zum Release",
+  "update.hint":
+    "Installiert wird nicht automatisch: Luchsr liegt unter %ProgramFiles% und ein Update braucht Administratorrechte.",
 
   // ---------------------------------------------------------------- Status --
   "status.ok": "OK",

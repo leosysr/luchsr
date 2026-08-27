@@ -71,6 +71,8 @@ Luchsr/
 │   ├── third-party.ps1        erzeugt THIRD-PARTY.md aus den Abhängigkeitsgraphen
 │   └── checkmk-probe.ps1      Diagnose gegen die REST-API, ohne Luchsr
 ├── handover-design/           Design-Export, REFERENZ — nie verändern, NICHT versioniert
+├── docs/
+│   └── bilder/                ERZEUGT — banner.png, scripts/make-icons.mjs
 ├── packaging/
 │   └── defaults.example.json  Vorlage für die Maschinenvorgaben
 ├── src/                       Frontend
@@ -133,6 +135,8 @@ Luchsr/
         ├── poll/              Slice 5
         │   ├── mod.rs         die Abrufschleife
         │   └── schedule.rs    Jitter, Backoff, Standby, rein und getestet
+        ├── update/            Update-Check gegen GitHub — rein und getestet
+        │   └── mod.rs         Versionsvergleich, Auswertung, ein HTTP-Aufruf
         ├── startup/           Startverhalten (Slice 9)
         │   └── mod.rs         Autostart, Einzelinstanz, Fenster — rein und getestet
         ├── actions/           Schreibaktionen (Slice 7)
@@ -468,6 +472,14 @@ Alles variabel, **keine hartkodierten Werte** — jeder Parameter ist im Einstel
 | D100 | `toast::extract` räumt **verwaiste Bilder** im Zielverzeichnis weg, statt eine Liste veralteter Dateinamen zu pflegen | Dasselbe Vorgehen wie `make-sounds.mjs` bei den Klängen. Eine Namensliste wäre nach der zweiten Änderung ein Friedhof; „alles, was kein aktuelles Logo ist" bleibt richtig, ohne gepflegt zu werden. Angefasst werden nur `.png` in einem Verzeichnis, das das Modul selbst anlegt — eine fremde Datei daneben bleibt liegen, und ein Test prüft das. Fehler beim Löschen werden übergangen: das Auslegen ist gelungen, und ein Rest ist kein Grund, den Start zu behelligen |
 | D101 | **Gefundener Fehler:** der Schliessknopf tat nichts. `core:window:default` enthält **ausschliesslich lesende** Fensterbefehle — `allow-hide` ist nicht dabei | `getCurrentWindow().hide()` wurde von der Berechtigungsprüfung abgelehnt. Die Ablehnung kam als abgewiesenes Promise zurück, und das vorangestellte `void` warf sie weg: der Knopf tat nichts und hinterliess **keine Spur**, nicht einmal im Protokoll. Behoben als Befehl `hide_popup` im Backend, nicht durch Öffnen der Kapazität: das Fenster wird an drei Stellen verborgen — Tray-Klick, Fokusverlust, Schliessknopf — und die gehören in eine Hand. Der Fehler wird jetzt angezeigt. Die Lehre ist allgemeiner als der Fall: `void` auf einem Promise ist eine Entscheidung, Fehler nicht zu sehen |
 | D102 | Der Fokusverlust-Behandler prüft, ob das Fenster **überhaupt noch sichtbar** ist, bevor er die Gnadenfrist setzt | Das Verbergen löst selbst einen Fokusverlust aus. Ohne die Abfrage setzte der Behandler danach die Frist aus D37, und ein sofortiger Klick auf das Tray-Icon nach dem Schliessknopf wäre wirkungslos geblieben — man hätte zweimal klicken müssen, um das Fenster wiederzubekommen. Aufgefallen beim Lesen, nicht beim Ausprobieren: der Fall braucht zwei Klicks in 300 ms |
+| D103 | Es gibt einen **Update-Check**, aber kein Auto-Update. Gefragt wird nur **auf Klick** | Die Festlegung „kein Auto-Update" bleibt, und der Grund ist nicht Aufwand: die Installation läuft **per Machine** nach `%ProgramFiles%` (D77), ein Update braucht also einen erhöhten Kontext. Ein Updater würde entweder eine UAC-Abfrage aus dem Nichts auslösen oder bei einem Benutzer ohne Administratorrechte still scheitern. Ausserdem stünde er in Konkurrenz zum Softwaremanagement: rollte das 1.2.0 aus, während sich Luchsr selbst 1.3.0 zieht, wüsste niemand mehr, welcher Stand wo läuft. Der Check dagegen kostet nichts und beantwortet die Frage, die neben der Versionsnummer in der Fusszeile ohnehin steht. **Kein Hintergrundverkehr:** die GitHub-API erlaubt unangemeldet 60 Anfragen je Stunde und IP, und hinter einem Firmen-NAT teilen sich das alle Rechner — ein Check bei jeder Anmeldung wäre in einem grösseren Haus nach Minuten am Limit |
+| D104 | Der Update-Check benutzt einen **eigenen** HTTP-Client, nicht den aus `checkmk` | Drei Gründe, jeder allein ausreichend. Der CheckMK-Client trägt das Automation-Secret im `Authorization`-Header — an GitHub gehört es unter keinen Umständen. Die Einstellung „TLS-Prüfung aus" gilt der internen CA und **darf nicht auf eine Anfrage ins öffentliche Netz durchschlagen**; hier wird immer geprüft, ohne Schalter. Und die Proxy-Einstellung gilt dem internen Server: für ein Ziel im Internet ist der Systemproxy die richtige Quelle — genau umgekehrt zu D34, wo der Systemproxy für den internen Server das Problem war. Weiterleitungen werden hier **gefolgt**, anders als in D10: es geht kein Geheimnis mit |
+| D105 | Ein Entwicklungsbau wird als **„voraus"** gemeldet, nicht als „aktuell" | Läuft eine Version, die neuer ist als das jüngste Release, ist „aktuell" bequem und falsch. Der Unterschied ist gerade der interessante: er sagt, dass dieser Stand nicht veröffentlicht ist. Drei Urteile statt eines Wahrheitswerts |
+| D106 | `open_release_page` **prüft die Adresse**, bevor sie an den Browser geht | Die Adresse kommt aus der GitHub-Antwort und damit von aussen. Ein Befehl, der jede hereingereichte Zeichenkette öffnet, wäre genau die Stelle, die `open_project_page` mit seiner festen Adresse vermeidet. Erlaubt ist nur, was unter `https://github.com/<repo>/releases/` liegt. Die Repository-Angabe steht **einmal** (`update::REPO`); Projektseite und API-Endpunkt werden daraus gebaut, sonst empfähle Luchsr eine Fassung, die es unter dem verlinkten Projekt nicht gibt |
+| D107 | Die Versionszerlegung ist **eigener Code**, keine Semver-Crate | Verglichen werden ausschliesslich Versionen dieses Projekts, und die haben die Form `x.y.z`. Eine Abhängigkeit für drei Zahlen wäre der falsche Tausch. Ein Zusatz hinter der dritten Zahl wird abgeschnitten und ignoriert, eine vierte Zahl gilt als unlesbar — beides ausdrücklich, damit nichts stillschweigend falsch verglichen wird. Ein Test hält den Fall fest, an dem ein Textvergleich scheitert: `1.10.0` ist neuer als `1.9.0` |
+| D108 | Das **Kopfbild des README trägt keine Wortmarke**, nur die Bildmarke | Die Schriften des Projekts sind Manrope und IBM Plex Mono. Ein Rasterizer, der keine Schrift zeichnen kann, würde daraus zwangsläufig eine andere Schrift machen — und ein selbstgemalter Schriftzug wäre eine dritte, die nirgends sonst vorkommt. Die Überschrift des README ist der Wortmarke näher. Der Streifen am unteren Rand trägt die sechs Zustandsfarben und ist nicht Dekoration: er sagt, worum es geht, bevor die erste Zeile gelesen ist |
+| D109 | Die Zustandstafel im README zeigt die **ausgelieferten** Icon-Dateien, keine Nachbildungen | `src-tauri/icons/tray/*-32.png` sind dieselben Dateien, die im Infobereich landen. Ein Screenshot oder eine eigens gemalte Tafel wäre eine zweite Wahrheit, die beim nächsten Palettenwechsel falsch wird — und niemand würde es merken, weil ein Bild nicht kompiliert wird |
+| D110 | Zwei `#[ignore]`-Tests greifen nach draussen: einer schickt echte Toasts, einer fragt wirklich bei GitHub | Beide sind Werkzeuge, keine Wächter. Ein Test, der bei jedem Durchlauf ins Internet greift, scheitert an einem Proxy, einem Anfragelimit oder einer Wartung — und dann steht eine rote Zeile, die nichts über dieses Projekt aussagt. Wozu er dennoch gut ist: er belegt, dass die **Anfrage** stimmt. Ohne User-Agent lehnt GitHub mit 403 ab, und das kann keine aufgezeichnete Antwort beweisen. Der Live-Test bricht deshalb bei Unerreichbarkeit **nicht** ab, sondern schreibt die Ursache — nur ein falsches Urteil bei erfolgreicher Antwort lässt ihn scheitern |
 
 ### Konsequenz aus D9 — prüfbare Invariante
 
@@ -645,6 +657,8 @@ Nach Slice 10:
 - **Kopfsymbol und Schliessknopf** — Toast-Kopfzeile ohne Symbol, damit nur ein
   Element Farbe trägt; dabei fiel auf, dass das × nie funktioniert hat (D98–D102).
   412 Rust-Tests, 47 Frontend-Tests
+- **Update-Check und README-Bilder** — Knopf „Nach Updates suchen" in der Fusszeile,
+  Kopfbild und Zustandstafel im README (D103–D110). 428 Rust-Tests, 47 Frontend-Tests
 
 ## Bei Unklarheit
 

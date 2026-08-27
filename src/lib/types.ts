@@ -251,3 +251,14 @@ export const INTERVAL_MIN_SECONDS = 15;
 export const INTERVAL_MAX_SECONDS = 600;
 export const TIMEOUT_MIN_SECONDS = 2;
 export const TIMEOUT_MAX_SECONDS = 120;
+
+/** Ergebnis eines Update-Checks, wie das Backend es meldet. */
+export interface UpdateReport {
+  verdict: "updateAvailable" | "upToDate" | "ahead";
+  /** Die laufende Fassung. */
+  current: string;
+  /** Die veröffentlichte Fassung. */
+  latest: string;
+  /** Die Seite des Releases — dort liegen MSI und Prüfsummen. */
+  releaseUrl: string;
+}

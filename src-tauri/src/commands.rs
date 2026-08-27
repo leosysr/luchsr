@@ -513,8 +513,15 @@ pub fn open_in_checkmk(
 /// beliebige URL öffnet: das wäre eine Stelle, an der ein Fehler im Frontend
 /// oder eine untergeschobene Zeichenkette den Standardbrowser auf etwas
 /// Beliebiges lenken könnte. Für den einen Link, den die Fusszeile braucht,
-/// genügt eine Konstante.
-pub const PROJECT_URL: &str = "https://github.com/leosysr/luchsr";
+/// genügt eine feste Adresse.
+///
+/// Zusammengesetzt aus [`crate::update::REPO`], damit Projektseite und
+/// API-Endpunkt des Update-Checks nicht auseinanderlaufen können: zeigten sie
+/// auf verschiedene Repositories, empfähle Luchsr eine Fassung, die es unter
+/// dem verlinkten Projekt nicht gibt.
+fn project_url() -> String {
+    crate::update::project_url()
+}
 
 /// Angaben für die Fusszeile.
 #[derive(Debug, Clone, Serialize)]
@@ -534,20 +541,61 @@ pub struct AboutInfo {
 pub fn about_info(app: tauri::AppHandle) -> AboutInfo {
     AboutInfo {
         version: app.package_info().version.to_string(),
-        project_url: PROJECT_URL.to_owned(),
+        project_url: project_url(),
     }
 }
 
 /// Öffnet die Projektseite im Standardbrowser.
 ///
-/// Ohne Parameter — siehe [`PROJECT_URL`].
+/// Ohne Parameter — siehe [`project_url`].
 #[tauri::command]
 pub fn open_project_page() -> CommandResult<()> {
-    tauri_plugin_opener::open_url(PROJECT_URL, None::<&str>).map_err(|error| {
+    let url = project_url();
+    tauri_plugin_opener::open_url(&url, None::<&str>).map_err(|error| {
         CommandError::plain(format!(
-            "Der Browser liess sich nicht öffnen: {error}. Die Adresse ist: {PROJECT_URL}"
+            "Der Browser liess sich nicht öffnen: {error}. Die Adresse ist: {url}"
         ))
     })
+}
+
+/// Öffnet die Seite eines Releases im Standardbrowser.
+///
+/// **Die Adresse wird geprüft, bevor sie an den Browser geht.** Sie kommt aus
+/// der GitHub-Antwort und damit von aussen; ein Befehl, der jede
+/// hereingereichte Zeichenkette öffnet, wäre genau die Stelle, die
+/// [`open_project_page`] bewusst vermeidet. Erlaubt ist nur, was unter der
+/// Release-Seite dieses Repositorys liegt.
+#[tauri::command]
+pub fn open_release_page(url: String) -> CommandResult<()> {
+    let erlaubt = format!("https://github.com/{}/releases/", crate::update::REPO);
+    if !url.starts_with(&erlaubt) {
+        return Err(CommandError::plain(format!(
+            "Diese Adresse wird nicht geöffnet: „{url}“. Erlaubt ist nur {erlaubt}…"
+        )));
+    }
+    tauri_plugin_opener::open_url(&url, None::<&str>).map_err(|error| {
+        CommandError::plain(format!(
+            "Der Browser liess sich nicht öffnen: {error}. Die Adresse ist: {url}"
+        ))
+    })
+}
+
+/* -------------------------------------------------------------------------- */
+/* Update                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/// Sieht nach, ob es eine neuere Fassung gibt.
+///
+/// Nur auf Klick und **nur nachsehen** — die Begründung steht im Kopf von
+/// [`crate::update`]. Die laufende Version kommt aus dem Paket, nicht aus dem
+/// Frontend: sonst könnte der Vergleich gegen eine Zahl laufen, die jemand
+/// anders gepflegt hat.
+#[tauri::command]
+pub async fn check_for_update(app: AppHandle) -> CommandResult<crate::update::UpdateReport> {
+    let current = app.package_info().version.to_string();
+    crate::update::check(&current)
+        .await
+        .map_err(|error| CommandError::plain(error.to_string()))
 }
 
 /* -------------------------------------------------------------------------- */
@@ -1260,6 +1308,8 @@ mod tests {
             "play_sound",
             "about_info",
             "open_project_page",
+            "open_release_page",
+            "check_for_update",
         ];
 
         // Jeder erwartete Befehl ist registriert.

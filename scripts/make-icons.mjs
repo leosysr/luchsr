@@ -152,6 +152,93 @@ for (const state of TRAY_STATES.filter((s) => s.key !== "disconnected")) {
 }
 
 
+/* --------------------------------------------------------------- Banner --- */
+
+/**
+ * Kopfbild für das README.
+ *
+ * Reine Bildmarke ohne Wortmarke: die Schriften des Projekts sind Manrope und
+ * IBM Plex Mono, und ein Rasterizer, der keine Schrift zeichnen kann, würde
+ * daraus zwangsläufig eine andere Schrift machen. Die Überschrift des README
+ * ist der Wortmarke näher als ein selbstgemalter Schriftzug.
+ *
+ * Der Streifen unten trägt die sechs Zustandsfarben in der Reihenfolge des
+ * Tray-Icons. Er ist nicht Dekoration: er sagt, worum es in diesem Programm
+ * geht, bevor die erste Zeile gelesen ist.
+ *
+ * 1280 px breit, weil GitHub das Bild auf die Spaltenbreite skaliert — kleiner
+ * würde auf einem hochauflösenden Bildschirm unscharf.
+ */
+const BANNER_DIR = join(ROOT, "docs", "bilder");
+mkdirSync(BANNER_DIR, { recursive: true });
+
+const BANNER = { breite: 1280, hoehe: 264, marke: 168, streifen: 10 };
+
+/** Legt ein quadratisches RGBA-Bild in eine grössere Fläche, alpha-gemischt. */
+function einsetzen(ziel, zielBreite, quelle, groesse, ox, oy) {
+  for (let y = 0; y < groesse; y++) {
+    for (let x = 0; x < groesse; x++) {
+      const q = (y * groesse + x) * 4;
+      const a = quelle[q + 3] / 255;
+      if (a === 0) continue;
+      const z = ((oy + y) * zielBreite + (ox + x)) * 4;
+      for (let k = 0; k < 3; k++) {
+        ziel[z + k] = Math.round(quelle[q + k] * a + ziel[z + k] * (1 - a));
+      }
+      ziel[z + 3] = 255;
+    }
+  }
+}
+
+{
+  const { breite, hoehe, marke, streifen } = BANNER;
+  const blatt = Buffer.alloc(breite * hoehe * 4);
+
+  // Grundfläche in Ink.
+  for (let i = 0; i < breite * hoehe; i++) {
+    blatt[i * 4] = COLORS.inkTief[0];
+    blatt[i * 4 + 1] = COLORS.inkTief[1];
+    blatt[i * 4 + 2] = COLORS.inkTief[2];
+    blatt[i * 4 + 3] = 255;
+  }
+
+  // Die Marke in Mint, ohne Kachel — auf Ink braucht sie keine.
+  const nutzhoehe = hoehe - streifen;
+  einsetzen(
+    blatt,
+    breite,
+    render(marke, { color: COLORS.mintHell }),
+    marke,
+    Math.round((breite - marke) / 2),
+    Math.round((nutzhoehe - marke) / 2),
+  );
+
+  // Zustandsstreifen am unteren Rand, gleich breite Abschnitte. Der letzte
+  // reicht bis zum Rand, damit kein Pixel Ink stehenbleibt.
+  TRAY_STATES.forEach((state, i) => {
+    const von = Math.round((breite * i) / TRAY_STATES.length);
+    const bis =
+      i === TRAY_STATES.length - 1
+        ? breite
+        : Math.round((breite * (i + 1)) / TRAY_STATES.length);
+    for (let y = nutzhoehe; y < hoehe; y++) {
+      for (let x = von; x < bis; x++) {
+        const z = (y * breite + x) * 4;
+        blatt[z] = state.color[0];
+        blatt[z + 1] = state.color[1];
+        blatt[z + 2] = state.color[2];
+        blatt[z + 3] = 255;
+      }
+    }
+  });
+
+  write(
+    join(BANNER_DIR, "banner.png"),
+    encodePng(breite, hoehe, blatt),
+    `${breite}×${hoehe}, Marke auf Ink + Zustandsstreifen`,
+  );
+}
+
 /* ------------------------------------------------------------- Ausgabe ---- */
 
 const spalte = Math.max(...written.map((w) => w.path.length));
