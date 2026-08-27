@@ -1,0 +1,31 @@
+# Abhängigkeiten
+node_modules/
+
+# Buildausgaben
+dist/
+src-tauri/target/
+src-tauri/gen/
+
+# Editor und OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+Thumbs.db
+desktop.ini
+
+# Lokale Umgebung
+.env
+.env.local
+
+# Signatur — Thumbprint und Zertifikate gehören nie ins Repo
+*.pfx
+*.p12
+signing.local.json
+
+# Der Design-Export bleibt LOKAL auf der Platte als Referenz — er wird aber
+# nicht versioniert. Er gestaltet die Marke "schattutor" und enthält deren
+# Logo, Wordmark und Avatare; die haben in einem öffentlichen Repository
+# nichts zu suchen. Übernommen sind daraus nur Tokens und Interaktionsregeln,
+# und die stehen in src/styles/tokens.css. Siehe D2 und D52 in CLAUDE.md.
+handover-design/

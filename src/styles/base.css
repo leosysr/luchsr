@@ -1,0 +1,138 @@
+/* ============================================================================
+   Luchsr — Element-Defaults
+
+   Portiert aus handover-design/tokens/base.css. Alles Visuelle liest aus
+   einem Token; hier steht kein konkreter Wert.
+   ============================================================================ */
+
+html {
+  -webkit-text-size-adjust: 100%;
+  /* Auch auf <html> setzen, nicht nur auf <body>: sonst bleibt der
+     UA-Standard (schwarz auf transparent) stehen und blitzt durch, falls
+     body den Viewport mal nicht vollständig deckt. */
+  background: var(--surface-page);
+  color: var(--text-body);
+}
+
+body {
+  margin: 0;
+  background: var(--surface-page);
+  color: var(--text-body);
+  font-family: var(--font-body);
+  font-size: var(--size-body);
+  font-weight: 500;
+  line-height: var(--leading-body);
+  letter-spacing: var(--tracking-body);
+  -webkit-font-smoothing: antialiased;
+  text-wrap: pretty;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  line-height: var(--leading-heading);
+  letter-spacing: var(--tracking-heading);
+}
+
+h1 {
+  font-size: var(--size-h1);
+  letter-spacing: var(--tracking-display);
+}
+
+h2 {
+  font-size: var(--size-h2);
+}
+
+h3 {
+  font-size: var(--size-h3);
+}
+
+p {
+  margin: 0;
+}
+
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--font-mono);
+  font-size: var(--size-mono);
+  letter-spacing: var(--tracking-mono);
+}
+
+a {
+  color: var(--text-accent);
+  text-decoration: none;
+  /* Die Unterstreichung verschwindet nie — Regel des Exports. */
+  border-bottom: 1.5px solid var(--st-mint-300);
+  transition:
+    color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+a:hover {
+  color: var(--text-hot);
+  border-bottom-color: var(--st-pink-300);
+}
+
+a:active {
+  color: var(--hot-solid-hover);
+}
+
+a:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-focus);
+  border-radius: var(--radius-xs);
+}
+
+::selection {
+  background: var(--st-pink-500);
+  color: var(--st-white);
+}
+
+hr {
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+  margin: var(--space-8) 0;
+}
+
+/* ----------------------------------------------------------------------------
+   Desktop-Anpassungen — Luchsr ist eine App, keine Webseite
+   ---------------------------------------------------------------------------- */
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  /* Kein Gummiband-Scrollen, keine Textauswahl per Doppelklick im Chrome der
+     App. Auswahl wird dort wieder erlaubt, wo Text kopierbar sein soll
+     (plugin_output im Detail-Panel). */
+  overflow: hidden;
+  user-select: none;
+  cursor: default;
+}
+
+/* Alles, was der Benutzer kopieren können muss, hebt die Sperre auf. */
+.selectable {
+  user-select: text;
+  cursor: text;
+}
+
+/* Schlanke Scrollleiste, aus Tokens. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+/* Fokus ist immer sichtbar — Tastaturbedienung ist Pflicht, nicht Bonus. */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-focus);
+}

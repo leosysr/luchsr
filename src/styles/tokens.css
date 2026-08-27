@@ -1,0 +1,599 @@
+/* ============================================================================
+   Luchsr — Design Tokens
+   ============================================================================
+
+   DIES IST DIE EINZIGE DATEI IM PROJEKT MIT KONKRETEN WERTEN.
+
+   In Komponenten stehen ausschließlich Tokens bzw. darauf gemappte
+   Tailwind-Klassen — niemals ein Hex-Wert, eine px-Zahl für Abstände oder ein
+   Font-Name. Das Design muss austauschbar bleiben.
+
+   Herkunft: handover-design/ (Export der Marke "schattutor"). Übernommen sind
+   Tokens und Interaktionsregeln, nicht die Marke — Entscheidung D2, CLAUDE.md.
+
+   Präfixe
+   -------
+   --st-*   Rohwerte WÖRTLICH aus handover-design/tokens/*.css.
+            Nicht ändern, ohne den Export gegenzulesen.
+   --lx-*   Rohwerte, die Luchsr ERGÄNZT. Ausschließlich die Statusfarben
+            (Amber, Zinnober, Karmin) — Entscheidung D3.
+
+   Aufbau
+   ------
+   :root    Farbpalette und semantische Farbaliase. Farben stehen hier und
+            nicht im @theme-Block, weil sie light-dark() nutzen und weil die
+            Namen des Exports (--text-body, --surface-card) mit Tailwinds
+            --text-* Namensraum für Schriftgrößen kollidieren würden.
+   @theme   Alles, was Tailwind zu Utility-Klassen machen soll. Die
+            Namensräume von Tailwind 4 sind bei Radien, Schatten, Motion,
+            Zeilenhöhen und Laufweiten identisch mit den Token-Namen des
+            Exports — deshalb stehen diese Werte direkt hier.
+
+   Der Reset `--color-*: initial` löscht Tailwinds mitgelieferte Palette.
+   Danach existiert bg-blue-500 nicht mehr: ein versehentlicher
+   Nicht-Token-Wert wird zum Buildfehler statt zum stillen Designbruch.
+   Dasselbe für Schriftgrößen, Radien, Schatten, Zeilenhöhen und Easings.
+
+   Hell/Dunkel
+   -----------
+   Jedes Farbtoken wird EINMAL deklariert, mit beiden Werten via light-dark().
+   Der Systemmodus greift über color-scheme; [data-theme] auf <html>
+   überschreibt ihn manuell (src/lib/theme.ts). Kein zweites Stylesheet,
+   keine duplizierten Blöcke — die einzige Ausnahme sind die Schatten, weil
+   light-dark() nur für <color> gilt.
+   ============================================================================ */
+
+:root {
+  color-scheme: light dark;
+
+  /* ==========================================================================
+     1 — ROHPALETTE  (--st-*, wörtlich aus dem Export)
+     ========================================================================== */
+
+  /* Neutrals */
+  --st-ink-900: #0a100d;
+  --st-ink-800: #0e1512;
+  --st-ink-700: #16211c;
+  --st-ink-600: #24352c;
+  --st-paper: #f5f7f3;
+  --st-paper-2: #edf1ec;
+  --st-white: #ffffff;
+  --st-line: #dce3dc;
+  --st-line-strong: #c3cfc6;
+
+  /* Grün — Primärfarbe: OK, erlaubter Verkehr, Primäraktionen */
+  --st-mint-50: #e6f8ef;
+  --st-mint-300: #8befc0;
+  --st-mint-400: #3ddc97;
+  --st-mint-500: #22b37a;
+  --st-mint-600: #0b7a41;
+  --st-mint-700: #095f33;
+
+  /* Pink — Aufmerksamkeit. In Luchsr: UNKNOWN und Fokusring */
+  --st-pink-50: #fde7f2;
+  --st-pink-300: #ffa3ce;
+  --st-pink-400: #ff6eb5;
+  --st-pink-500: #f0389b;
+  --st-pink-600: #c51e78;
+
+  /* Gedämpfte Töne */
+  --st-slate-500: #5e6e65;
+  --st-slate-400: #8b9990;
+  --st-fog-400: #9db3a6;
+  --st-fog-500: #7e9689;
+
+  /* Zwei Werte, die der Export nur inline im Dunkel-Scope benutzt und selbst
+     nicht benennt. Die Werte sind wörtlich übernommen, die Namen sind unsere.
+     Hier benannt, damit jeder konkrete Farbwert in dieser Datei genau einmal
+     steht — sonst ist nicht prüfbar, ob eine Farbe aus dem Export kommt. */
+  --st-frost: #eaf3ed; /* Textfarbe im Dunkelmodus, auch --code-text */
+  --st-line-dark: #31463a; /* --border-strong im Dunkelmodus */
+
+  /* ==========================================================================
+     2 — ERGÄNZTE ROHPALETTE  (--lx-*, NICHT aus dem Export)
+
+     Der Export hat bewusst nur zwei Farbtöne und verbietet einen dritten.
+     Für ein Monitoringwerkzeug ist Farbcodierung Funktion, nicht Dekoration:
+     bei 80 dichten Zeilen sind Helligkeitsstufen eines Farbtons nicht
+     zuverlässig unterscheidbar, erst recht nicht bei Rot-Grün-Schwäche.
+     Deshalb Amber für WARN, Zinnober für CRIT und Karmin für DOWN.  — D3
+
+     Die Werte sind auf die Kontrastanforderung hin gewählt; die gemessenen
+     Verhältnisse stehen an der Statusgruppe unten.
+     ========================================================================== */
+
+  /* Amber — WARN */
+  --lx-amber-50: #fff3de;
+  --lx-amber-300: #ffd37a;
+  --lx-amber-400: #ffc24d;
+  --lx-amber-600: #96590a;
+
+  /* Zinnober — CRIT */
+  --lx-vermilion-50: #ffece3;
+  --lx-vermilion-400: #ff6a3d;
+  --lx-vermilion-600: #b23a0d;
+
+  /* Karmin — DOWN.
+     Ein eigener Farbton, kein dunkleres Rot. Der erste Entwurf hatte CRIT und
+     DOWN als zwei Rottöne derselben Familie; im Tray-Icon bei 16 px waren das
+     zwei nicht unterscheidbare rote Blöcke. Nachgemessen liegen sie jetzt 27°
+     im Farbton auseinander und sind auch bei 16 px klar zu trennen. */
+  --lx-carmine-50: #ffe3ea;
+  --lx-carmine-400: #ff2f5c;
+  --lx-carmine-600: #b30030;
+
+  /* ==========================================================================
+     3 — SEMANTISCHE FARBALIASE  (Namen aus dem Export)
+
+     Komponenten referenzieren diese Ebene, nie die Rohpalette.
+     light-dark(hell, dunkel) — beide Werte aus dem Export.
+     ========================================================================== */
+
+  /* Text */
+  --text-body: light-dark(var(--st-ink-800), var(--st-frost));
+  --text-muted: light-dark(var(--st-slate-500), var(--st-fog-400));
+  --text-faint: light-dark(var(--st-slate-400), var(--st-fog-500));
+  --text-accent: light-dark(var(--st-mint-600), var(--st-mint-400));
+  --text-hot: light-dark(var(--st-pink-500), var(--st-pink-400));
+  --text-inverse: light-dark(var(--st-frost), var(--st-ink-800));
+
+  /* Flächen */
+  --surface-page: light-dark(var(--st-paper), var(--st-ink-800));
+  --surface-card: light-dark(var(--st-white), var(--st-ink-700));
+  --surface-sunken: light-dark(var(--st-paper-2), var(--st-ink-900));
+  --surface-ink: var(--st-ink-800);
+  /* Abdunkelung hinter einem Dialog. Im Dunkelmodus dichter, weil dort der
+     Helligkeitsunterschied zur Karte kleiner ist — mit demselben Wert wäre
+     kaum zu sehen, dass die Liste dahinter gesperrt ist. */
+  --surface-scrim: light-dark(
+    color-mix(in srgb, var(--st-ink-800) 40%, transparent),
+    color-mix(in srgb, var(--st-ink-900) 62%, transparent)
+  );
+  --surface-accent-soft: light-dark(var(--st-mint-50), color-mix(in srgb, var(--st-mint-400) 12%, transparent));
+  --surface-hot-soft: light-dark(var(--st-pink-50), color-mix(in srgb, var(--st-pink-500) 14%, transparent));
+
+  /* Rahmen */
+  --border-subtle: light-dark(var(--st-line), var(--st-ink-600));
+  --border-strong: light-dark(var(--st-line-strong), var(--st-line-dark));
+  --border-ink: light-dark(var(--st-ink-800), var(--st-mint-400));
+
+  /* Aktionen */
+  --accent-solid: light-dark(var(--st-mint-600), var(--st-mint-400));
+  --accent-solid-hover: light-dark(var(--st-mint-700), var(--st-mint-300));
+  --accent-on-solid: light-dark(var(--st-white), var(--st-ink-900));
+  --hot-solid: var(--st-pink-500);
+  --hot-solid-hover: var(--st-pink-600);
+  --hot-on-solid: var(--st-white);
+  --focus-ring: var(--st-pink-500);
+
+  /* Code und Terminal — laufen in BEIDEN Themes auf Ink */
+  --code-bg: var(--st-ink-800);
+  --code-text: var(--st-frost);
+  --code-accent: var(--st-mint-400);
+  --code-hot: var(--st-pink-400);
+  --code-comment: var(--st-fog-500);
+
+  /* ==========================================================================
+     4 — STATUSFARBEN
+
+     Eigene Gruppe, getrennt von den übrigen Farbtokens. Verbindlich:
+     Status wird NIE allein über Farbe kodiert — immer zusätzlich ein Symbol.
+     Die Symbolzuordnung steht in src/lib/status.ts, nicht hier.
+
+     Kontrast gegen --surface-page und Farbtonwinkel:
+
+                 hell            dunkel          Farbton   Abstand
+       ok        5.0:1           10.5:1          154°/149°
+       warn      5.2:1           11.5:1           39°/ 34°   115°
+       crit      5.6:1            6.5:1           14°/ 16°    26°
+       down      6.6:1            5.1:1          347°/344°    27°
+       unknown   5.1:1            7.2:1          331°/328°    16°
+       stale      5.0:1            5.8:1         148°/146°   177°
+
+     Alle sechs erfüllen WCAG AA für normalen Text in beiden Themes.
+
+     Die Farbtonabstände sind so wichtig wie der Kontrast: das Tray-Icon ist
+     eine 16-px-Farbfläche, und dort entscheidet allein der Farbton. Der engste
+     Abstand ist DOWN zu UNKNOWN mit 16° — die trennen sich zusätzlich über die
+     Helligkeit, UNKNOWN ist sichtbar heller und pastelliger.
+     ========================================================================== */
+
+  /* OK — Marken-Grün, deckt sich mit der Semantik des Exports (allow) */
+  --state-ok: light-dark(var(--st-mint-600), var(--st-mint-400));
+  --state-ok-soft: light-dark(var(--st-mint-50), color-mix(in srgb, var(--st-mint-400) 12%, transparent));
+
+  /* WARN — Amber, ergänzt */
+  --state-warn: light-dark(var(--lx-amber-600), var(--lx-amber-400));
+  --state-warn-soft: light-dark(var(--lx-amber-50), color-mix(in srgb, var(--lx-amber-400) 13%, transparent));
+
+  /* CRIT — Zinnober, ergänzt */
+  --state-crit: light-dark(var(--lx-vermilion-600), var(--lx-vermilion-400));
+  --state-crit-soft: light-dark(
+    var(--lx-vermilion-50),
+    color-mix(in srgb, var(--lx-vermilion-400) 13%, transparent)
+  );
+
+  /* DOWN — Host nicht erreichbar. Unterscheidet sich von CRIT über den
+     FARBTON, nicht über die Helligkeit: Karmin gegen Zinnober, 27° auseinander.
+     Der erste Entwurf hatte hier ein dunkleres Rot derselben Familie — im
+     Tray-Icon bei 16 px war das von CRIT nicht zu unterscheiden. */
+  --state-down: light-dark(var(--lx-carmine-600), var(--lx-carmine-400));
+  --state-down-soft: light-dark(
+    var(--lx-carmine-50),
+    color-mix(in srgb, var(--lx-carmine-400) 16%, transparent)
+  );
+  --state-down-solid: light-dark(var(--lx-carmine-600), var(--lx-carmine-400));
+  --state-down-on-solid: light-dark(var(--st-white), var(--st-ink-900));
+
+  /* UNKNOWN — Marken-Pink. Der Check selbst funktioniert nicht, ein anderer
+     Fehlertyp als "der Dienst ist kaputt". Magenta liegt von Grün, Amber und
+     Rot maximal weit weg, die Zeile fällt sofort als Sonderfall auf. */
+  --state-unknown: light-dark(var(--st-pink-600), var(--st-pink-400));
+  --state-unknown-soft: light-dark(var(--st-pink-50), color-mix(in srgb, var(--st-pink-400) 14%, transparent));
+
+  /* STALE — Daten veraltet, keine Verbindung */
+  --state-stale: light-dark(var(--st-slate-500), var(--st-fog-500));
+  --state-stale-soft: light-dark(var(--st-paper-2), color-mix(in srgb, var(--st-fog-400) 10%, transparent));
+
+  /* Gedämpfte Darstellung für quittierte Zustände und Wartungszeit.
+     Per Toggle eingeblendet, dann optisch zurückgenommen. */
+  --state-muted-opacity: 0.55;
+
+  /* ==========================================================================
+     5 — SCHRIFTGRÖSSEN  (Export, Name --size-*)
+
+     Die Folien-/Videoskala des Exports (104/72/48/32/24 px) ist bewusst NICHT
+     übernommen: Luchsr hat keine 1920×1080-Flächen. Die UI-Skala reicht bis
+     12 px, die Mono-Skala bis 11 px — genug für die dichte Tabelle.
+
+     Mono sitzt immer eine Stufe kleiner als der Prosatext daneben.
+     ========================================================================== */
+
+  --size-display-1: 72px;
+  --size-display-2: 56px;
+  --size-h1: 40px;
+  --size-h2: 30px;
+  --size-h3: 22px;
+  --size-body-lg: 18px;
+  --size-body: 16px;
+  --size-small: 14px;
+  --size-micro: 12px;
+
+  --size-mono-lg: 16px;
+  --size-mono: 14px;
+  --size-mono-sm: 13px;
+  --size-mono-xs: 11px;
+
+  /* ==========================================================================
+     6 — ABSTÄNDE  (Export, 4-px-Basis)
+     2 px existiert nur für Icon-Korrekturen und Hairline-Einzüge.
+     ========================================================================== */
+
+  --space-0: 0px;
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 8px;
+  --space-4: 12px;
+  --space-5: 16px;
+  --space-6: 20px;
+  --space-7: 24px;
+  --space-8: 32px;
+  --space-9: 40px;
+  --space-10: 56px;
+  --space-11: 72px;
+  --space-12: 96px;
+
+  --gutter-card: 20px;
+  --gutter-section: 56px;
+  --measure-prose: 64ch;
+
+  /* ==========================================================================
+     7 — LUCHSR-DICHTE
+
+     Semantische Aliase für die dichte Tabelle. Alle Werte kommen aus der
+     Abstandsskala des Exports — hier wird kein neuer Wert erfunden.
+     ========================================================================== */
+
+  /* ==========================================================================
+     Bedienelemente  (Export, Abschnitt "Key specs")
+
+     Diese Werte liegen bewusst NEBEN der 4-px-Abstandsskala: Höhe 34, Padding
+     22, Gap 6 und 10, Icon 18. Der Handoff ist da eindeutig — "Recreate the UI
+     pixel-accurately; do not round values to a 4/8px grid". Deshalb stehen sie
+     hier als eigene Gruppe und werden nicht auf die Skala gebogen.
+     ========================================================================== */
+
+  --control-h-sm: 34px;
+  --control-h-md: 40px;
+  --control-h-lg: 48px;
+
+  --control-px-sm: 12px;
+  --control-px-md: 16px;
+  --control-px-lg: 22px;
+
+  --control-gap-sm: 6px;
+  --control-gap-md: 8px;
+  --control-gap-lg: 10px;
+
+  --control-icon-sm: 16px;
+  --control-icon-md: 18px;
+  --control-icon-lg: 20px;
+
+  /* Switch: Track 40×22, Knopf 16, Weg 3 → 21 */
+  --switch-track-w: 40px;
+  --switch-track-h: 22px;
+  --switch-knob: 16px;
+  --switch-knob-off: 3px;
+  --switch-knob-on: 21px;
+
+  /* Checkbox: 20×20, Haken 14 */
+  --checkbox-size: 20px;
+  --checkbox-check: 14px;
+
+  /* Badge: Padding 4 9, Laufweite .06em */
+  --badge-py: 4px;
+  --badge-px: 9px;
+
+  /* Callout: Padding 14 16, vierseitiger Rahmen */
+  --callout-py: 14px;
+  --callout-px: 16px;
+
+  --row-height: var(--space-8); /* 32px — 80 Zeilen bleiben scrollbar brauchbar */
+  --row-gap-inline: var(--space-3); /* 8px innerhalb einer Zeile */
+  --row-pad-x: var(--space-4); /* 12px seitlich */
+
+  /* Detail-Panel: Anteil der Fensterhöhe, den das Bodenblatt höchstens nimmt.
+     Der Rest muss Liste bleiben — sonst verliert man beim Lesen eines Details
+     den Überblick, den die Liste gerade liefert. */
+  --detail-max-height: 55%;
+
+  --status-dot: var(--space-3); /* 8px Statuspunkt */
+  --icon-inline: var(--space-5); /* 16px im Text */
+  --icon-control: var(--space-6); /* 20px in Buttons */
+  --icon-row: var(--space-7); /* 24px in Listen */
+}
+
+/* ============================================================================
+   Manueller Theme-Override
+
+   Ohne [data-theme] folgt die App dem Systemmodus (prefers-color-scheme über
+   color-scheme: light dark). Mit [data-theme] wird er festgenagelt.
+   ============================================================================ */
+
+:root[data-theme="light"] {
+  color-scheme: only light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: only dark;
+}
+
+/* ============================================================================
+   TAILWIND-NAMENSRÄUME
+
+   Ab hier stehen die Werte, deren Token-Namen im Export bereits identisch mit
+   den Namensräumen von Tailwind 4 sind: Schriftfamilien, Radien, Schatten,
+   Motion, Zeilenhöhen, Laufweiten. Sie werden deshalb direkt im @theme-Block
+   deklariert statt doppelt.
+
+   --color-* und --text-* sind Aliase auf die Blöcke oben.
+   ============================================================================ */
+
+@theme {
+  /* ---------------------------------------------------------------- Farben -- */
+  /* Tailwinds Palette wird gelöscht, nur Tokens bleiben nutzbar. */
+
+  --color-*: initial;
+
+  --color-body: var(--text-body);
+  --color-muted: var(--text-muted);
+  --color-faint: var(--text-faint);
+  --color-accent: var(--text-accent);
+  --color-hot: var(--text-hot);
+  --color-inverse: var(--text-inverse);
+
+  --color-page: var(--surface-page);
+  --color-card: var(--surface-card);
+  --color-sunken: var(--surface-sunken);
+  --color-ink: var(--surface-ink);
+  --color-scrim: var(--surface-scrim);
+  --color-accent-soft: var(--surface-accent-soft);
+  --color-hot-soft: var(--surface-hot-soft);
+
+  --color-line: var(--border-subtle);
+  --color-line-strong: var(--border-strong);
+  --color-line-ink: var(--border-ink);
+
+  --color-accent-solid: var(--accent-solid);
+  --color-accent-solid-hover: var(--accent-solid-hover);
+  --color-on-accent: var(--accent-on-solid);
+  --color-hot-solid: var(--hot-solid);
+  --color-hot-solid-hover: var(--hot-solid-hover);
+  --color-on-hot: var(--hot-on-solid);
+  --color-focus: var(--focus-ring);
+
+  --color-code-bg: var(--code-bg);
+  --color-code-text: var(--code-text);
+  --color-code-accent: var(--code-accent);
+  --color-code-hot: var(--code-hot);
+  --color-code-comment: var(--code-comment);
+
+  --color-state-ok: var(--state-ok);
+  --color-state-ok-soft: var(--state-ok-soft);
+  --color-state-warn: var(--state-warn);
+  --color-state-warn-soft: var(--state-warn-soft);
+  --color-state-crit: var(--state-crit);
+  --color-state-crit-soft: var(--state-crit-soft);
+  --color-state-down: var(--state-down);
+  --color-state-down-soft: var(--state-down-soft);
+  --color-state-down-solid: var(--state-down-solid);
+  --color-on-state-down: var(--state-down-on-solid);
+  --color-state-unknown: var(--state-unknown);
+  --color-state-unknown-soft: var(--state-unknown-soft);
+  --color-state-stale: var(--state-stale);
+  --color-state-stale-soft: var(--state-stale-soft);
+
+  /* ------------------------------------------------------------ Schriften -- */
+  /* Werte stehen hier, weil --font-* der Tailwind-Namensraum IST.
+     Fallbacks sind Windows-Systemfonts: greift nur, falls die eingebetteten
+     woff2 fehlen. Einbindung in fonts.css. */
+
+  --font-*: initial;
+  --font-display: "Manrope", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Manrope", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", "Cascadia Mono", "Consolas", ui-monospace, monospace;
+
+  /* Gewichte werden NICHT zurückgesetzt: Tailwinds Standardnamen treffen die
+     Skala des Exports exakt und sind vertrauter als eigene.
+       font-medium    500   Body
+       font-bold      700   UI-Betonung
+       font-extrabold 800   Display */
+
+  /* ------------------------------------------------------- Schriftgrößen -- */
+  /* Aliase auf --size-* oben. Namen weichen ab, weil --color-body und
+     --text-body beide die Klasse text-body erzeugen würden: die 16-px-Stufe
+     heißt hier `base`, nicht `body`. */
+
+  --text-*: initial;
+  --text-display-1: var(--size-display-1);
+  --text-display-2: var(--size-display-2);
+  --text-h1: var(--size-h1);
+  --text-h2: var(--size-h2);
+  --text-h3: var(--size-h3);
+  --text-lg: var(--size-body-lg);
+  --text-base: var(--size-body);
+  --text-sm: var(--size-small);
+  --text-xs: var(--size-micro);
+  --text-mono-lg: var(--size-mono-lg);
+  --text-mono: var(--size-mono);
+  --text-mono-sm: var(--size-mono-sm);
+  --text-mono-xs: var(--size-mono-xs);
+
+  /* -------------------------------------- Zeilenhöhen und Laufweiten (Export) */
+
+  --leading-*: initial;
+  --leading-tight: 0.95;
+  --leading-snug: 1.1;
+  --leading-heading: 1.15;
+  --leading-body: 1.55;
+  --leading-mono: 1.7;
+
+  --tracking-*: initial;
+  --tracking-display: -0.045em;
+  --tracking-heading: -0.03em;
+  --tracking-body: -0.01em;
+  --tracking-mono: 0em;
+  --tracking-kicker: 0.14em;
+  --tracking-badge: 0.06em; /* Badge, Export */
+
+  /* ------------------------------------------------------------- Abstände -- */
+  /* Basis-Multiplikator 4 px, deckt die Skala des Exports ab:
+     p-1=4 p-2=8 p-3=12 p-4=16 p-5=20 p-6=24 p-8=32 p-10=40 p-14=56 p-24=96 */
+
+  --spacing: var(--space-2);
+  --spacing-card: var(--gutter-card);
+  --spacing-section: var(--gutter-section);
+  --spacing-row: var(--row-height);
+  --spacing-row-x: var(--row-pad-x);
+  --spacing-row-gap: var(--row-gap-inline);
+  --spacing-control-sm: var(--control-h-sm);
+  --spacing-control-md: var(--control-h-md);
+  --spacing-control-lg: var(--control-h-lg);
+  --spacing-cpx-sm: var(--control-px-sm);
+  --spacing-cpx-md: var(--control-px-md);
+  --spacing-cpx-lg: var(--control-px-lg);
+  --spacing-cgap-sm: var(--control-gap-sm);
+  --spacing-cgap-md: var(--control-gap-md);
+  --spacing-cgap-lg: var(--control-gap-lg);
+  --spacing-switch-w: var(--switch-track-w);
+  --spacing-switch-h: var(--switch-track-h);
+  --spacing-knob: var(--switch-knob);
+  --spacing-checkbox: var(--checkbox-size);
+  --spacing-badge-y: var(--badge-py);
+  --spacing-badge-x: var(--badge-px);
+  --spacing-callout-y: var(--callout-py);
+  --spacing-callout-x: var(--callout-px);
+
+  /* --------------------------------------------------- Radien (Export) ----- */
+  /* Pills nur für den Switch-Track. Keine Pill-Buttons in diesem Design. */
+
+  --radius-*: initial;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-pill: 999px;
+
+  /* ------------------------------------------------ Elevation (Export) ----- */
+  /* Dunkle Flächen tragen Border, keinen Schatten — im Dunkelmodus unten
+     neutralisiert. */
+
+  --shadow-*: initial;
+  --shadow-hairline: 0 1px 2px color-mix(in srgb, var(--st-ink-800) 6%, transparent);
+  --shadow-card: 0 2px 8px color-mix(in srgb, var(--st-ink-800) 7%, transparent);
+  --shadow-pop: 0 12px 32px color-mix(in srgb, var(--st-ink-800) 12%, transparent);
+
+  /* --------------------------------------------------- Motion (Export) ----- */
+  /* Easing ist "out". Press verschiebt 1 px nach unten, skaliert nie. */
+
+  --ease-*: initial;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  --duration-fast: 120ms; /* Hover, Farbwechsel */
+  --duration-base: 180ms; /* Controls, Toggles */
+  --duration-slow: 280ms; /* Panels */
+  --duration-reveal: 420ms; /* Schrittweises Einblenden */
+}
+
+/* ============================================================================
+   Ergänzungen, die @theme nicht ausdrücken kann
+   ============================================================================ */
+
+:root {
+  /* Fokusring des Exports: 2 px Ring mit 2 px Surface-Offset. */
+  --ring-focus: 0 0 0 2px var(--surface-page), 0 0 0 4px var(--focus-ring);
+  --ring-accent: 0 0 0 2px var(--st-mint-400);
+
+  /* Eingabefelder haben im Export einen eigenen Fokus: Rahmen in
+     --accent-solid plus 3 px weicher Ring. Nicht der allgemeine Fokusring. */
+  --ring-input-focus: 0 0 0 3px color-mix(in srgb, var(--accent-solid) 14%, transparent);
+
+  /* Press-Versatz. */
+  --press-shift: 1px;
+}
+
+/* ----------------------------------------------------------------------------
+   Schatten im Dunkelmodus neutralisieren
+
+   Der einzige duplizierte Block. Grund: light-dark() ist auf <color>
+   beschränkt und funktioniert nicht für <shadow>.
+   ---------------------------------------------------------------------------- */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --shadow-hairline: none;
+    --shadow-card: none;
+    --shadow-pop: 0 12px 32px color-mix(in srgb, var(--st-ink-900) 45%, transparent);
+  }
+}
+
+:root[data-theme="dark"] {
+  --shadow-hairline: none;
+  --shadow-card: none;
+  --shadow-pop: 0 12px 32px color-mix(in srgb, var(--st-ink-900) 45%, transparent);
+}
+
+/* ----------------------------------------------------------------------------
+   prefers-reduced-motion nullt jede Dauer  (Export)
+   ---------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+    --duration-reveal: 0ms;
+  }
+}

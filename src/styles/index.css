@@ -1,0 +1,16 @@
+/* ============================================================================
+   Luchsr — Style-Einstiegspunkt
+
+   Reihenfolge ist bedeutsam:
+     1 tailwindcss    Preflight und Utility-Generierung
+     2 tokens.css     alle Werte + @theme-Mapping (die einzige Wertedatei)
+     3 fonts.css      @font-face, reine Pfade
+     4 utilities.css  eigene Utilities, nur Verpackungen um Tokens
+     5 base.css       Element-Defaults, überschreibt Preflight
+   ============================================================================ */
+
+@import "tailwindcss";
+@import "./tokens.css";
+@import "./fonts.css";
+@import "./utilities.css";
+@import "./base.css";

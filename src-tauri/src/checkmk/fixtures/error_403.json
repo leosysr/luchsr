@@ -1,0 +1,6 @@
+{
+  "//": "NACHGEBILDETE Form, nicht aufgezeichnet: ein 403 setzt eine erfolgreiche Anmeldung voraus, und die lässt sich ohne gültiges Secret nicht herstellen. Der Aufbau (title/status/detail in application/problem+json) ist derselbe wie bei den aufgezeichneten Antworten. Geprüft wird hier nur, dass das detail-Feld durchgereicht wird — der konkrete Text kommt vom Server.",
+  "title": "Forbidden",
+  "status": 403,
+  "detail": "You do not have the permission for general.use."
+}

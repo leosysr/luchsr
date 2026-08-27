@@ -1,0 +1,73 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Luchsr",
+  "version": "1.0.0",
+  "identifier": "de.leosysr.luchsr",
+
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Luchsr",
+        "width": 780,
+        "height": 600,
+        "minWidth": 640,
+        "minHeight": 420,
+        "resizable": true,
+        "decorations": false,
+        "skipTaskbar": true,
+        "visible": false,
+        "focus": true,
+        "alwaysOnTop": true,
+        "shadow": true,
+        "center": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost data:; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' ipc: http://ipc.localhost; object-src 'none'; base-uri 'none'"
+    }
+  },
+
+  "bundle": {
+    "active": true,
+    "targets": ["msi", "nsis"],
+    "publisher": "Fabian Schatto – leosysr",
+    "copyright": "© Fabian Schatto – leosysr",
+    "category": "Utility",
+    "shortDescription": "CheckMK im Infobereich",
+    "longDescription": "Luchsr zeigt CheckMK-Statusmeldungen im Windows-Infobereich an: offene Probleme, Quittierungen und Wartungszeiten, ohne Browser.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
+    "resources": {
+      "../LICENSE": "LICENSE",
+      "../THIRD-PARTY.md": "THIRD-PARTY.md",
+      "../licenses/*": "licenses/"
+    },
+    "windows": {
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "http://timestamp.digicert.com",
+      "certificateThumbprint": null,
+      "allowDowngrades": false,
+      "wix": {
+        "language": ["de-DE"],
+        "upgradeCode": "CB4DDB85-AC1A-4E6F-9462-84644BC624A5"
+      },
+      "nsis": {
+        "installMode": "perMachine",
+        "languages": ["German"],
+        "displayLanguageSelector": false
+      }
+    }
+  }
+}

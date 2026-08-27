@@ -1,0 +1,17 @@
+{
+  "site": "leosys",
+  "group": "",
+  "rest_api": {
+    "revision": "0"
+  },
+  "versions": {
+    "apache": [2, 4, 62],
+    "checkmk": "2.3.0p23",
+    "python": "3.12.6 (main, Sep 12 2024, 08:11:17) [GCC 13.2.0]",
+    "python_branch": "3.12",
+    "mod_wsgi": [4, 9, 4],
+    "wsgi": [1, 0]
+  },
+  "edition": "cre",
+  "demo": false
+}

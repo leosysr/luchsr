@@ -1,0 +1,53 @@
+{
+  "links": [],
+  "id": "all",
+  "domainType": "host",
+  "value": [
+    {
+      "links": [],
+      "domainType": "host",
+      "id": "leosys-esxi-03",
+      "title": "leosys-esxi-03",
+      "members": {},
+      "extensions": {
+        "name": "leosys-esxi-03",
+        "state": 1,
+        "plugin_output": "CRIT - 10.42.7.31: rta nan, lost 100%",
+        "last_state_change": 1723459452,
+        "acknowledged": 0,
+        "scheduled_downtime_depth": 0
+      }
+    },
+    {
+      "links": [],
+      "domainType": "host",
+      "id": "leosys-vm-77",
+      "title": "leosys-vm-77",
+      "members": {},
+      "extensions": {
+        "name": "leosys-vm-77",
+        "state": 2,
+        "plugin_output": "UNREACHABLE - Parent host leosys-esxi-03 is DOWN",
+        "last_state_change": 1723459460,
+        "acknowledged": 0,
+        "scheduled_downtime_depth": 0
+      }
+    },
+    {
+      "links": [],
+      "domainType": "host",
+      "id": "leosys-test-09",
+      "title": "leosys-test-09",
+      "members": {},
+      "extensions": {
+        "name": "leosys-test-09",
+        "state": 1,
+        "plugin_output": "CRIT - 10.42.9.9: rta nan, lost 100%",
+        "last_state_change": 1723300000,
+        "acknowledged": 0,
+        "scheduled_downtime_depth": 1
+      }
+    }
+  ],
+  "extensions": {}
+}

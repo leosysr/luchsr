@@ -1,0 +1,103 @@
+[package]
+name = "luchsr"
+# Die verbindliche Version steht in tauri.conf.json (Single Source of Truth).
+# Dieser Wert wird nicht gebundelt und bleibt absichtlich ein Platzhalter.
+version = "0.0.0"
+description = "CheckMK-Statusmeldungen im Windows-Infobereich"
+authors = ["Fabian Schatto – leosysr"]
+edition = "2021"
+rust-version = "1.82"
+license = "MIT"
+publish = false
+
+[lib]
+# Tauri erwartet die Logik in einer lib, main.rs ist nur der Einsprung.
+name = "luchsr_lib"
+# Nur rlib. Die Tauri-Vorlage setzt zusätzlich staticlib und cdylib — die
+# braucht ausschliesslich der Mobile-Build. Auf Windows erzeugt cdylib eine
+# unnötige DLL samt Importbibliothek und eine Linker-Warnung bei jedem Build.
+crate-type = ["rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# --- Tauri ------------------------------------------------------------------
+# tray-icon und image-png werden ab Slice 5 für das Infobereich-Icon gebraucht.
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+tauri-plugin-notification = "2"   # Slice 8
+tauri-plugin-autostart = "2"      # Slice 9
+tauri-plugin-single-instance = "2" # Slice 9
+tauri-plugin-opener = "2"         # "CheckMK im Browser öffnen"
+tauri-plugin-log = "2"            # ohne Logger verschwindet jedes log::-Makro still
+tauri-plugin-dialog = "2"        # Speicherdialog für den CSV-Export
+
+# Signalton über PlaySoundW aus winmm.dll. Dieselbe Hauptversion, die Tauri
+# ohnehin im Baum hat — eine zweite wäre eine zweite Übersetzungseinheit.
+windows-sys = { version = "0.61", features = ["Win32_Media_Audio"] }
+
+# --- Serialisierung ---------------------------------------------------------
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# --- HTTP -------------------------------------------------------------------
+# native-tls ist ZWINGEND: nutzt unter Windows Schannel und damit den
+# Windows-Zertifikatspeicher. Mit rustls scheitert die TLS-Prüfung gegen die
+# interne CA.
+#
+# default-features = false ist Pflicht, weil reqwest 0.13 mit
+# default-tls = [rustls] ausliefert — die Defaults würden rustls hereinziehen.
+# Dadurch müssen aber auch die harmlosen Defaults einzeln nachgezogen werden:
+#   query        .query() für die columns- und query-Parameter der CheckMK-API
+#   system-proxy Einstellung "Proxy: System"
+#   http2        war Default, wird gegen moderne CheckMK-Instanzen genutzt
+#   charset      korrekte Dekodierung von .text() bei Fehlerantworten
+reqwest = { version = "0.13", default-features = false, features = [
+  "native-tls",
+  "json",
+  "query",
+  "gzip",
+  "http2",
+  "charset",
+  "system-proxy",
+] }
+
+# --- Laufzeit ---------------------------------------------------------------
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync"] }
+
+# --- Credentials ------------------------------------------------------------
+# Automation-Secret ausschliesslich im Windows Credential Manager,
+# Service "leosysr.Luchsr".
+#
+# ACHTUNG für Slice 4: keyring 4 ist gegenüber 3 umgebaut. Es ist jetzt eine
+# Fassade über keyring-core mit austauschbaren Stores. Vor dem ersten
+# Entry::new() muss einmalig ein Default-Store registriert werden — ohne das
+# schlägt jeder Zugriff zur Laufzeit fehl, nicht beim Kompilieren.
+# Nur der Windows-Store wird eingebunden, keine Linux- oder Apple-Backends.
+keyring = { version = "4", default-features = false, features = [
+  "v1",
+  "windows-native-keyring-store",
+] }
+
+# --- Hilfsbibliotheken -----------------------------------------------------
+thiserror = "2"
+url = "2"
+chrono = { version = "0.4", features = ["serde"] }
+log = "0.4"
+
+[features]
+# Standardfeatures leer — bewusst nichts Optionales aktiv.
+default = []
+
+[profile.release]
+# Kleines, schnelles Binary. Verteilung läuft über Softwaremanagement,
+# Startzeit zählt mehr als Buildzeit.
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[dev-dependencies]
+# Temp-Verzeichnisse fuer die Store-Tests. Nur im Test, nicht im Bundle.
+tempfile = "3"

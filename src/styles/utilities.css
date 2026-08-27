@@ -1,0 +1,94 @@
+/* ============================================================================
+   Luchsr — eigene Utilities
+
+   Hier stehen KEINE Werte, nur Verpackungen um Tokens aus tokens.css.
+
+   Zwei Gründe für diese Datei:
+
+   1. Tailwind 4 hat für `--duration-*` keinen Theme-Namensraum. Die Variablen
+      landen zwar in :root, aber `duration-fast` als Klasse entsteht nicht.
+      Ohne diese Utilities müsste in Komponenten `duration-[var(--duration-fast)]`
+      stehen — lesbar ist das nicht.
+
+   2. Interaktionsregeln des Exports, die sich sonst jemand falsch
+      zusammenbaut. `press` ist die wichtigste: der Export verlangt
+      translateY(1px) und verbietet Skalierung ausdrücklich. Als Utility kann
+      man es richtig verwenden, ohne die Regel zu kennen.
+   ============================================================================ */
+
+/* ------------------------------------------------------------- Motion ----- */
+
+@utility duration-fast {
+  transition-duration: var(--duration-fast);
+}
+
+@utility duration-base {
+  transition-duration: var(--duration-base);
+}
+
+@utility duration-slow {
+  transition-duration: var(--duration-slow);
+}
+
+@utility duration-reveal {
+  transition-duration: var(--duration-reveal);
+}
+
+/* -------------------------------------------------------- Interaktionen --- */
+
+/**
+ * Press-Verhalten des Exports: 1px nach unten, NIE skalieren.
+ * "Press — transform: translateY(1px). Never scale."
+ */
+@utility press {
+  &:active {
+    transform: translateY(var(--press-shift));
+  }
+}
+
+/** Fokusring des Exports: 2px Ring mit 2px Surface-Offset. */
+@utility ring-focus {
+  box-shadow: var(--ring-focus);
+}
+
+/**
+ * Fokus von Eingabefeldern. Der Export gibt ihnen ausdrücklich einen anderen
+ * Fokus als dem Rest: Rahmen in --accent-solid plus 3px weicher Ring, statt
+ * des pinken Rings mit Surface-Offset.
+ */
+@utility ring-input {
+  box-shadow: var(--ring-input-focus);
+}
+
+/** Disabled des Exports: 42% Opazität, kein Farbwechsel. */
+@utility is-disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+/**
+ * Höchsthöhe des Detail-Panels. Eigene Utility, weil Tailwinds `max-h-*` aus
+ * der Abstandsskala liest und dort kein Prozentwert steht.
+ */
+@utility max-h-detail {
+  max-height: var(--detail-max-height);
+}
+
+/* ------------------------------------------------------------ Zustände ---- */
+
+/**
+ * Gedämpfte Darstellung für quittierte Zustände und laufende Wartungszeit.
+ * Werden per Toggle eingeblendet und sollen dann sichtbar zurücktreten.
+ */
+@utility handled {
+  opacity: var(--state-muted-opacity);
+}
+
+/**
+ * Hebt die globale Auswahlsperre auf. Für alles, was der Benutzer kopieren
+ * können muss — plugin_output, Hostnamen, Zeitstempel.
+ */
+@utility selectable {
+  user-select: text;
+  cursor: text;
+}

@@ -1,0 +1,48 @@
+{
+  "//": "BEISPIEL für Maschinenvorgaben. Nach %ProgramData%\\leosysr\\Luchsr\\defaults.json kopieren, bevor Luchsr zum ersten Mal startet.",
+
+  "//1": "Die Datei ist OPTIONAL. Fehlt sie, startet Luchsr mit dem Ersteinrichtungs-Assistenten.",
+  "//2": "Sie darf ein Teilausschnitt sein — nur was hier steht, überschreibt die eingebauten Vorgaben.",
+  "//3": "Sie wird NUR beim allerersten Start gelesen. Existiert bereits eine config.json des Benutzers, bleibt diese Datei ohne Wirkung. Eine spätere Änderung wirkt also nicht auf bestehende Installationen.",
+  "//4": "Das Automation-Secret gehört NICHT hierher und wird hier auch nicht gelesen. Es liegt ausschliesslich im Windows Credential Manager unter dem Service leosysr.Luchsr, Account = Benutzername.",
+  "//5": "Schlüssel mit // werden von Luchsr ignoriert und dienen nur der Dokumentation.",
+
+  "connections": [
+    {
+      "id": "default",
+      "name": "Zentrale",
+      "server": "https://checkmk.example.intern",
+      "site": "meinesite",
+      "username": "",
+      "verifyTls": true,
+      "proxy": { "mode": "system" }
+    }
+  ],
+
+  "polling": {
+    "intervalSeconds": 60,
+    "timeoutSeconds": 10
+  },
+
+  "notifications": {
+    "level": "criticalOnly",
+    "soundPath": null
+  },
+
+  "appearance": {
+    "theme": "system",
+    "language": "de"
+  },
+
+  "behaviour": {
+    "autostart": true,
+    "startMinimised": true,
+    "pinPopup": false,
+    "hideHandled": true
+  },
+
+  "permissions": {
+    "allowAcknowledge": false,
+    "allowDowntime": false
+  }
+}

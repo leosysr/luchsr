@@ -1,0 +1,152 @@
+{
+  "links": [
+    {
+      "domainType": "link",
+      "rel": "self",
+      "href": "https://checkmk.example.intern/leosys/check_mk/api/1.0/domain-types/service/collections/all",
+      "method": "GET",
+      "type": "application/json"
+    }
+  ],
+  "id": "all",
+  "domainType": "service",
+  "value": [
+    {
+      "links": [],
+      "domainType": "service",
+      "id": "leosys-sql-01-Filesystem_var",
+      "title": "Filesystem /var",
+      "members": {},
+      "extensions": {
+        "host_name": "leosys-sql-01",
+        "description": "Filesystem /var",
+        "state": 2,
+        "plugin_output": "CRIT - Used: 96.41% - 188 GiB of 195 GiB (warn/crit at 80.00%/90.00% used), trend per 1 day 0 hours: +2.11 GiB",
+        "last_state_change": 1723449713,
+        "acknowledged": 0,
+        "scheduled_downtime_depth": 0,
+        "is_flapping": 0
+      }
+    },
+    {
+      "links": [],
+      "domainType": "service",
+      "id": "leosys-dc-02-NTP_Time",
+      "title": "NTP Time",
+      "members": {},
+      "extensions": {
+        "host_name": "leosys-dc-02",
+        "description": "NTP Time",
+        "state": 2,
+        "plugin_output": "CRIT - Offset: 4.8210 seconds (warn/crit at 0.2000 seconds/2.0000 seconds), Stratum: 3",
+        "last_state_change": 1723453200,
+        "acknowledged": 0,
+        "scheduled_downtime_depth": 0,
+        "is_flapping": 1
+      }
+    },
+    {
+      "links": [],
+      "domainType": "service",
+      "id": "leosys-print-01-Check_MK_Agent",
+      "title": "Check_MK Agent",
+      "members": {},
+      "extensions": {
+        "host_name": "leosys-print-01",
+        "description": "Check_MK Agent",
+        "state": 3,
+        "plugin_output": "UNKNOWN - Agent reachable but sent no sections",
+        "last_state_change": 1723442400,
+        "acknowledged": 0,
+        "scheduled_downtime_depth": 0,
+        "is_flapping": 0
+      }
+    },
+    {
+      "links": [],
+      "domainType": "service",
+      "id": "leosys-sql-01-Memory",
+      "title": "Memory",
+      "members": {},
+      "extensions": {
+        "host_name": "leosys-sql-01",
+        "description": "Memory",
+        "state": 1,
+        "plugin_output": "WARN - RAM: 84.13% - 53.8 GiB of 64.0 GiB (warn/crit at 80.00%/90.00% used)",
+        "last_state_change": 1723446000,
+        "acknowledged": 0,
+        "scheduled_downtime_depth": 0,
+        "is_flapping": 0
+      }
+    },
+    {
+      "links": [],
+      "domainType": "service",
+      "id": "leosys-fw-01-Interface_ge-0-0-3",
+      "title": "Interface ge-0/0/3",
+      "members": {},
+      "extensions": {
+        "host_name": "leosys-fw-01",
+        "description": "Interface ge-0/0/3",
+        "state": 1,
+        "plugin_output": "WARN - [4] (up) MAC: 00:1B:44:11:3A:B7, Speed: 1 GBit/s, In: 97.8 MB/s (78.3%)",
+        "last_state_change": 1723455000,
+        "acknowledged": 0,
+        "scheduled_downtime_depth": 0,
+        "is_flapping": 0
+      }
+    },
+    {
+      "links": [],
+      "domainType": "service",
+      "id": "leosys-web-02-HTTP_intern",
+      "title": "HTTP intern",
+      "members": {},
+      "extensions": {
+        "host_name": "leosys-web-02",
+        "description": "HTTP intern",
+        "state": 2,
+        "plugin_output": "CRIT - Certificate 'CN=leosys-web-02.example.intern' expires in 3 days",
+        "last_state_change": 1723420000,
+        "acknowledged": 1,
+        "scheduled_downtime_depth": 0,
+        "is_flapping": 0
+      }
+    },
+    {
+      "links": [],
+      "domainType": "service",
+      "id": "leosys-nas-02-Disk_IO_SUMMARY",
+      "title": "Disk IO SUMMARY",
+      "members": {},
+      "extensions": {
+        "host_name": "leosys-nas-02",
+        "description": "Disk IO SUMMARY",
+        "state": 1,
+        "plugin_output": "WARN - Read: 412 MB/s, Write: 88.1 MB/s, Latency: 42.7 ms",
+        "last_state_change": 1723400000,
+        "acknowledged": 0,
+        "scheduled_downtime_depth": 2,
+        "is_flapping": 0
+      }
+    },
+    {
+      "links": [],
+      "domainType": "service",
+      "id": "leosys-esxi-03-Multipath",
+      "title": "Multipath Größe (Uplink)",
+      "members": {},
+      "extensions": {
+        "host_name": "leosys-esxi-03",
+        "description": "Multipath Größe (Uplink)",
+        "state": 2,
+        "plugin_output": "CRIT - Pfade: 1 von 4 aktiv, Umlaute & Sonderzeichen: äöüß / \\ \" '",
+        "last_state_change": 1723459000,
+        "acknowledged": 0,
+        "scheduled_downtime_depth": 0,
+        "is_flapping": 0
+      }
+    }
+  ],
+  "extensions": {}
+}

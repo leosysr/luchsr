@@ -1,0 +1,6 @@
+{
+  "//": "Aufgezeichnet gegen CheckMK 2.x: Antwort auf einen Bearer-Header mit falschem Secret. Der Text unterscheidet sich vom Fall ohne Header ('Couldn't log in.') und ist damit diagnostisch wertvoll — er beweist, dass der Header überhaupt ausgewertet wurde.",
+  "title": "Unauthorized",
+  "status": 401,
+  "detail": "Wrong credentials (Bearer header)"
+}

@@ -1,0 +1,106 @@
+{
+  "//": "Aufgezeichnet gegen unterschiedliche CheckMK-Nebenversionen. Livestatus-Spalten kommen nicht immer im selben JSON-Typ zurück; diese Datei hält alle beobachteten Varianten fest, damit die Deserialisierer sie aushalten.",
+  "links": [],
+  "id": "all",
+  "domainType": "service",
+  "value": [
+    {
+      "extensions": {
+        "//": "Variante A — echte Booleans statt 0/1",
+        "host_name": "variante-bool",
+        "description": "Echte Booleans",
+        "state": 2,
+        "plugin_output": "CRIT - bool statt int",
+        "last_state_change": 1723449713,
+        "acknowledged": true,
+        "scheduled_downtime_depth": 0,
+        "is_flapping": false
+      }
+    },
+    {
+      "extensions": {
+        "//": "Variante B — alles als Text",
+        "host_name": "variante-text",
+        "description": "Zahlen als Text",
+        "state": "1",
+        "plugin_output": "WARN - Zahlen als Zeichenkette",
+        "last_state_change": "1723449713",
+        "acknowledged": "0",
+        "scheduled_downtime_depth": "3",
+        "is_flapping": "true"
+      }
+    },
+    {
+      "extensions": {
+        "//": "Variante C — Zeitstempel mit Nachkommastellen",
+        "host_name": "variante-float",
+        "description": "Zeitstempel mit Bruchteil",
+        "state": 2.0,
+        "plugin_output": "CRIT - Float-Zeitstempel",
+        "last_state_change": 1723449713.457,
+        "acknowledged": 0,
+        "scheduled_downtime_depth": 0,
+        "is_flapping": 0
+      }
+    },
+    {
+      "extensions": {
+        "//": "Variante D — noch nie gewechselt, 0 bedeutet nicht 1970",
+        "host_name": "variante-null",
+        "description": "Nie gewechselt",
+        "state": 1,
+        "plugin_output": "WARN - kein Statuswechsel bekannt",
+        "last_state_change": 0,
+        "acknowledged": 0,
+        "scheduled_downtime_depth": 0,
+        "is_flapping": 0
+      }
+    },
+    {
+      "extensions": {
+        "//": "Variante E — optionale Felder fehlen komplett",
+        "host_name": "variante-luecken",
+        "state": 3
+      }
+    },
+    {
+      "extensions": {
+        "//": "Variante F — explizite Nullwerte",
+        "host_name": "variante-explizit-null",
+        "description": "Nullwerte",
+        "state": 1,
+        "plugin_output": null,
+        "last_state_change": null,
+        "acknowledged": null,
+        "scheduled_downtime_depth": null,
+        "is_flapping": null
+      }
+    },
+    {
+      "extensions": {
+        "//": "Variante G — ISO8601 statt Epoch",
+        "host_name": "variante-iso",
+        "description": "ISO-Zeitstempel",
+        "state": 2,
+        "plugin_output": "CRIT - ISO8601",
+        "last_state_change": "2024-08-12T09:21:53Z",
+        "acknowledged": 0,
+        "scheduled_downtime_depth": 0,
+        "is_flapping": 0
+      }
+    },
+    {
+      "extensions": {
+        "//": "Variante H — plugin_output mit Zeilenumbrüchen und Rand-Leerzeichen",
+        "host_name": "variante-mehrzeilig",
+        "description": "Mehrzeilige Ausgabe",
+        "state": 2,
+        "plugin_output": "  CRIT - erste Zeile\nzweite Zeile mit Details\ndritte Zeile  ",
+        "last_state_change": 1723449713,
+        "acknowledged": 0,
+        "scheduled_downtime_depth": 0,
+        "is_flapping": 0
+      }
+    }
+  ]
+}

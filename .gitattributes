@@ -1,0 +1,28 @@
+# Zeilenenden vereinheitlichen.
+#
+# Entwickelt wird unter Windows, wo Werkzeuge mal LF und mal CRLF schreiben —
+# PowerShell und Node tun Verschiedenes. Ohne diese Datei landet die Mischung
+# im Repository, und ein späterer Diff zeigt ganze Dateien als geändert, obwohl
+# sich nur die Zeilenenden unterscheiden.
+#
+# `text=auto` heisst: im Repository immer LF, im Arbeitsverzeichnis das, was
+# die Plattform erwartet.
+* text=auto
+
+# Batch- und PowerShell-Dateien brauchen CRLF im Arbeitsverzeichnis. Bei .ps1
+# ist das nicht zwingend, aber der Windows-Editor stellt LF-Dateien sonst als
+# eine einzige Zeile dar.
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Binärdateien nie anfassen. Git erkennt das meist selbst; hier steht es
+# ausdrücklich, damit eine Fehlerkennung die Schriften oder die erzeugten
+# Klänge nicht unbrauchbar macht.
+*.woff2 binary
+*.png binary
+*.ico binary
+*.wav binary
+*.msi binary
+*.exe binary
+*.pfx binary
