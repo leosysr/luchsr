@@ -71,10 +71,33 @@ pub enum EventKind {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NotifyEvent {
     pub kind: EventKind,
+    /// Der gemeldete Zustand, `None` bei einer Entwarnung.
+    ///
+    /// [`EventKind`] fasst CRIT, DOWN und UNREACHABLE zu einer Stufe zusammen,
+    /// weil sie denselben Klang bekommen. Das Logo des Toasts unterscheidet
+    /// dagegen fünf Farben — CRIT und DOWN sind zwei getrennte Farbtöne (D23).
+    /// Ohne dieses Feld müsste der Zustand aus dem Titel zurückgelesen werden,
+    /// und der Titel ist Text für Menschen, keine Schnittstelle.
+    pub state: Option<ProblemState>,
     /// Kopfzeile des Toasts.
     pub title: String,
     /// Rumpf. Eine bis zwei Zeilen; länger schneidet Windows ab.
     pub body: String,
+}
+
+/// Welche Stufe ein Zustand auslöst.
+///
+/// Die Zuordnung stand bis dahin nur im Doc-Kommentar von [`EventKind`] und
+/// nicht im Code: `problem_event` setzte ausnahmslos [`EventKind::Critical`].
+/// Eine neue WARN bekam damit den Klang für Kritisches, und die Auswahl
+/// „Warnung" in den Einstellungen war wirkungslos. Aufgefallen ist es nicht,
+/// weil die Klangtests ihre Ereignisse von Hand bauen — die Naht zwischen
+/// `decide` und `loudest` war nie durchlaufen.
+pub fn kind_of(state: ProblemState) -> EventKind {
+    match state {
+        ProblemState::Warn | ProblemState::Unknown => EventKind::Warning,
+        _ => EventKind::Critical,
+    }
 }
 
 /// Ergebnis der Entscheidung.
@@ -233,7 +256,8 @@ fn problem_event(problem: &Problem, vorher: Option<ProblemState>) -> NotifyEvent
     }
 
     NotifyEvent {
-        kind: EventKind::Critical,
+        kind: kind_of(problem.state),
+        state: Some(problem.state),
         title: headline(problem),
         body: zeilen.join("\n"),
     }
@@ -257,6 +281,9 @@ fn recovery_event(subject: &str, alt: ProblemState, jetzt: Option<&Problem>) -> 
 
     NotifyEvent {
         kind: EventKind::Recovery,
+        // Eine Entwarnung hat keinen gemeldeten Zustand mehr — sie sagt
+        // gerade, dass keiner mehr vorliegt. Der alte steht im Rumpf.
+        state: None,
         title: titel,
         body: format!("{} {} → {}", text::WAS, short_state(alt), grund),
     }
@@ -338,6 +365,80 @@ mod tests {
         let a = subject_of(&problem("h", Some("s"), ProblemState::Crit));
         let b = subject_of(&problem("h", Some("s"), ProblemState::Warn));
         assert_eq!(a, b, "der Zustand darf nicht im Gegenstand stecken");
+    }
+
+    /* -------------------------------------------------------- Stufe ----- */
+
+    #[test]
+    fn warn_und_unknown_sind_warnungen_alles_andere_ist_kritisch() {
+        assert_eq!(kind_of(ProblemState::Warn), EventKind::Warning);
+        assert_eq!(kind_of(ProblemState::Unknown), EventKind::Warning);
+        assert_eq!(kind_of(ProblemState::Crit), EventKind::Critical);
+        assert_eq!(kind_of(ProblemState::Down), EventKind::Critical);
+        assert_eq!(kind_of(ProblemState::Unreachable), EventKind::Critical);
+    }
+
+    /// Der Fehler, den dieser Test festhält: `problem_event` setzte
+    /// ausnahmslos `Critical`. Eine neue WARN bekam damit den Klang für
+    /// Kritisches, und die Auswahl „Warnung" in den Einstellungen war ohne
+    /// Wirkung. Geprüft wird hier durch `decide` hindurch — genau die Naht,
+    /// die vorher nicht durchlaufen wurde.
+    #[test]
+    fn eine_neue_warnung_wird_nicht_als_kritisch_gemeldet() {
+        let leer = Notified::new();
+        let erst = decide(
+            &snapshot(vec![]),
+            &leer,
+            NotificationLevel::AllChanges,
+            true,
+        );
+        let dann = decide(
+            &snapshot(vec![problem("h", Some("s"), ProblemState::Warn)]),
+            &erst.notified,
+            NotificationLevel::AllChanges,
+            false,
+        );
+        assert_eq!(dann.events.len(), 1);
+        assert_eq!(dann.events[0].kind, EventKind::Warning);
+    }
+
+    /* -------------------------------------------------- Zustand am Ereignis */
+
+    #[test]
+    fn ein_problemereignis_fuehrt_seinen_zustand_mit() {
+        let leer = Notified::new();
+        let erst = decide(
+            &snapshot(vec![]),
+            &leer,
+            NotificationLevel::CriticalOnly,
+            true,
+        );
+        let dann = decide(
+            &snapshot(vec![problem("h", Some("s"), ProblemState::Down)]),
+            &erst.notified,
+            NotificationLevel::CriticalOnly,
+            false,
+        );
+        assert_eq!(dann.events[0].state, Some(ProblemState::Down));
+    }
+
+    #[test]
+    fn eine_entwarnung_fuehrt_keinen_zustand_mit() {
+        let leer = Notified::new();
+        let erst = decide(
+            &snapshot(vec![problem("h", Some("s"), ProblemState::Crit)]),
+            &leer,
+            NotificationLevel::CriticalOnly,
+            true,
+        );
+        let dann = decide(
+            &snapshot(vec![]),
+            &erst.notified,
+            NotificationLevel::CriticalOnly,
+            false,
+        );
+        assert_eq!(dann.events[0].kind, EventKind::Recovery);
+        assert_eq!(dann.events[0].state, None);
     }
 
     #[test]

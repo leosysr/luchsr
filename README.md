@@ -35,8 +35,9 @@ SmartScreen-Hinweis.
   `plugin_output`.
 * **Quittieren** und **Wartungszeit setzen**, beides einzeln freizugeben und
   standardmässig aus.
-* Windows-Benachrichtigungen bei Statusänderungen, mit kurzen Hinweistönen —
-  ein Klang je Ereignis, jeder abschaltbar.
+* Windows-Benachrichtigungen bei Statusänderungen — mit Luchsr als Absender und
+  einem Zustandslogo in der Farbe des Tray-Icons, dazu kurze Hinweistöne: ein
+  Klang je Ereignis, jeder abschaltbar.
 * CSV-Export der vollständigen Liste.
 
 Nicht Teil des Projekts: andere Monitoring-Backends, Konfigurationsänderungen an
@@ -48,7 +49,7 @@ MSI aus den [Releases](../../releases) laden, oder nach einem eigenen Build aus
 `src-tauri/target/release/bundle/msi/`.
 
 ```bash
-msiexec /i Luchsr_1.1.0_x64_de-DE.msi /qn
+msiexec /i Luchsr_1.2.0_x64_de-DE.msi /qn
 ```
 
 Installiert **per Machine** nach `%ProgramFiles%\Luchsr`. Die Upgrade-GUID ist
@@ -164,8 +165,8 @@ MSI, NSIS-Paket und `SHA256SUMS.txt` an ein Release. Ausgelöst wird es durch
 einen Tag:
 
 ```bash
-git tag v1.1.0
-git push origin v1.1.0
+git tag v1.2.0
+git push origin v1.2.0
 ```
 
 Der Tag muss zur `version` in `src-tauri/tauri.conf.json` passen — der Workflow

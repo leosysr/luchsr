@@ -22,7 +22,7 @@ use std::sync::Mutex;
 use std::time::Duration;
 
 use serde::Serialize;
-use tauri::{Manager, State};
+use tauri::{AppHandle, Manager, State};
 
 use crate::actions::WriteAction;
 use crate::checkmk::{
@@ -431,6 +431,30 @@ pub fn status_current(state: State<'_, AppState>) -> StatusPayload {
 #[tauri::command]
 pub fn refresh_now(state: State<'_, AppState>) {
     state.refresh_signal().trigger();
+}
+
+/// Verbirgt das Popup.
+///
+/// **Warum als Befehl und nicht mit `getCurrentWindow().hide()` im Frontend:**
+/// `core:window:default` enthält ausschliesslich **lesende** Fensterbefehle —
+/// `allow-hide` und `allow-show` sind nicht dabei. Der Aufruf aus JavaScript
+/// wurde deshalb von der Berechtigungsprüfung abgelehnt; die Ablehnung kam als
+/// abgewiesenes Promise zurück, und ein vorangestelltes `void` verschluckte
+/// sie. Der Schliessknopf tat nichts und hinterliess keine Spur.
+///
+/// Die Kapazität um `core:window:allow-hide` zu erweitern wäre die andere
+/// Möglichkeit gewesen. Ein Befehl ist hier richtiger: das Fenster wird an drei
+/// Stellen verborgen — Tray-Klick, Fokusverlust, Schliessknopf — und die
+/// gehören in eine Hand. Ausserdem bleibt die Kapazität so eng, wie sie
+/// gedacht ist.
+#[tauri::command]
+pub fn hide_popup(app: AppHandle) -> CommandResult<()> {
+    let window = app
+        .get_webview_window(crate::tray::POPUP_LABEL)
+        .ok_or_else(|| CommandError::plain("Das Fenster wurde nicht gefunden"))?;
+    window
+        .hide()
+        .map_err(|error| CommandError::plain(format!("Fenster verbergen: {error}")))
 }
 
 /// Merkt die Anheftung des Fensters.
@@ -1227,6 +1251,7 @@ mod tests {
             "refresh_now",
             "open_in_checkmk",
             "set_pin_popup",
+            "hide_popup",
             "export_csv",
             "action_comment",
             "acknowledge",

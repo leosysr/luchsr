@@ -96,7 +96,6 @@ pub fn run() {
         // Nur für den Speicherdialog des CSV-Exports. Der Öffner-Plugin wird
         // nicht registriert, weil `open_url` ohne Zustand arbeitet.
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_notification::init())
         .manage(state)
         .setup(move |app| {
             let handle = app.handle().clone();
@@ -119,6 +118,11 @@ pub fn run() {
             // Autostart erst hier: ein Fehlschlag beim Registrierungszugriff
             // darf den Start nicht verhindern, und das Fenster steht schon.
             startup::initialise_autostart(&handle);
+
+            // Identität für die Benachrichtigungen. Aus demselben Grund hier
+            // unten: scheitert das, fehlen dem Toast Name und Logo — der
+            // Toast selbst kommt trotzdem, und die Anwendung läuft.
+            initialise_toast_identity(&handle);
 
             log::info!(
                 "gestartet {} — Fenster: {}",
@@ -153,6 +157,7 @@ pub fn run() {
             commands::refresh_now,
             commands::open_in_checkmk,
             commands::set_pin_popup,
+            commands::hide_popup,
             commands::export_csv,
             commands::action_comment,
             commands::acknowledge,
@@ -164,4 +169,42 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("Luchsr konnte nicht gestartet werden");
+}
+
+/// Packt die Toast-Logos aus und trägt die Identität in die Registry ein.
+///
+/// Beides zusammen, weil das eine ohne das andere nichts nützt: der
+/// Registry-Eintrag zeigt auf eine Datei, die es geben muss, und die Dateien
+/// ohne Eintrag ergäben einen Toast ohne Absender.
+///
+/// Fehlschläge werden protokolliert, nicht behandelt. Ein Toast ohne Logo ist
+/// ein Schönheitsfehler; die Anwendung deswegen nicht zu starten wäre die
+/// falsche Reihenfolge der Wichtigkeiten.
+fn initialise_toast_identity(app: &tauri::AppHandle) {
+    let Some(dir) = notify::asset_dir(app) else {
+        log::warn!("Kein lokales Datenverzeichnis — Benachrichtigungen bleiben ohne Logo");
+        return;
+    };
+
+    if let Err(fehler) = notify::toast::extract(&dir) {
+        log::warn!("Toast-Logos liessen sich nicht auspacken ({dir:?}): {fehler}");
+        return;
+    }
+
+    let aumid = &app.config().identifier;
+    let soll = notify::identity::desired(&app.package_info().name);
+
+    match notify::identity::reconcile(aumid, &soll) {
+        // Was geschehen ist, gehört ins Protokoll: sonst fällt eine Abweichung
+        // nie auf, und genau daran ist der Autostart einmal gescheitert (D80).
+        Ok(ergebnis) if ergebnis.is_empty() => {
+            log::debug!("Benachrichtigungs-Identität {aumid} stand bereits richtig")
+        }
+        Ok(ergebnis) => log::info!(
+            "Benachrichtigungs-Identität {aumid}: geschrieben {:?}, entfernt {:?}",
+            ergebnis.written,
+            ergebnis.removed
+        ),
+        Err(fehler) => log::warn!("Benachrichtigungs-Identität {aumid} nicht eintragbar: {fehler}"),
+    }
 }

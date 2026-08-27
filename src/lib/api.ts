@@ -310,3 +310,14 @@ export function setDowntime(
 export function setPinPopup(pinned: boolean): Promise<void> {
   return invoke<void>("set_pin_popup", { pinned });
 }
+
+/**
+ * Verbirgt das Popup.
+ *
+ * Nicht `getCurrentWindow().hide()`: die mutierenden Fensterbefehle stecken
+ * nicht in `core:window:default`, der Aufruf wird von der Berechtigungsprüfung
+ * abgelehnt. Das Backend darf es, siehe `commands::hide_popup`.
+ */
+export function hidePopup(): Promise<void> {
+  return invoke<void>("hide_popup");
+}

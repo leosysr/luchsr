@@ -13,7 +13,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { error as logError } from "@tauri-apps/plugin-log";
 
 import { Callout } from "@/components";
 import { ProblemsView } from "@/features/problems/ProblemsView";
@@ -22,6 +22,7 @@ import { ErrorBoundary } from "@/features/shell/ErrorBoundary";
 import { PopupChrome } from "@/features/shell/PopupChrome";
 import {
   asCommandError,
+  hidePopup,
   onShowSettings,
   onStatus,
   refreshNow,
@@ -71,8 +72,18 @@ export default function App() {
       else abmelden.push(off);
     };
 
-    void onStatus(setStatus).then(merken);
-    void onShowSettings(() => setView("settings")).then(merken);
+    // Mit `.catch` und nicht mit `void`: scheitert eine Anmeldung, hört das
+    // Fenster still auf, Statusänderungen zu bekommen — die Liste bliebe auf
+    // dem Stand des ersten Abrufs stehen und sähe dabei aktuell aus. Eine
+    // Fehlermeldung im Fenster wäre hier zu laut, das Protokoll ist der
+    // richtige Ort.
+    const anmeldungFehlte = (was: string) => (raw: unknown) =>
+      void logError(`Ereignis „${was}" liess sich nicht abonnieren: ${String(raw)}`);
+
+    onStatus(setStatus).then(merken).catch(anmeldungFehlte("status"));
+    onShowSettings(() => setView("settings"))
+      .then(merken)
+      .catch(anmeldungFehlte("show-settings"));
 
     return () => {
       verworfen = true;
@@ -95,7 +106,14 @@ export default function App() {
     // Verstecken, nicht schliessen: die Anwendung lebt im Infobereich weiter.
     // `close()` würde das Fenster zerstören und den Tray-Klick wirkungslos
     // machen.
-    void getCurrentWindow().hide();
+    //
+    // Der Fehler wird angezeigt und nicht verschluckt. Vorher stand hier
+    // `void getCurrentWindow().hide()` — der Aufruf scheiterte an der
+    // Berechtigungsprüfung, und das `void` warf die Ablehnung weg. Der Knopf
+    // tat nichts, ohne eine Spur zu hinterlassen. Ein stiller Fehlschlag im
+    // einzigen Weg, das Fenster zuzumachen, ist genau das, was man mitbekommen
+    // muss.
+    hidePopup().catch((raw: unknown) => setError(asCommandError(raw)));
   }, []);
 
   const pinned = outcome?.settings.behaviour.pinPopup ?? false;

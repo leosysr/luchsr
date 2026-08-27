@@ -111,6 +111,47 @@ for (const state of TRAY_STATES) {
   }
 }
 
+/* ----------------------------------------------------------- Toast-Logos -- */
+
+/**
+ * Logos für die Windows-Benachrichtigungen.
+ *
+ * Windows zeigt `appLogoOverride` mit 48 px bei 100 % Skalierung und skaliert
+ * bis 400 % hoch. 192 px ist damit die Grösse, ab der nichts mehr dazukommt.
+ * Die Augen sind hier sichtbar — anders als beim 16-px-Tray-Icon, wo sie unter
+ * 2 px lägen und matschen würden.
+ *
+ * Die Kopfzeile des Toasts trägt bewusst KEIN Symbol: ein grünes Markensymbol
+ * neben einer roten Zustandsfläche liest sich widersprüchlich, weil Grün in
+ * diesem Programm „OK" heisst. Es der Farbe folgen zu lassen ginge nicht — das
+ * Symbol kommt aus einer Datei für die ganze Anwendung, und das Info-Center
+ * zeichnet alte Toasts daraus neu. Siehe src/notify/toast.rs.
+ *
+ * `disconnected` fehlt bewusst: nach einem Fehlversuch wird nicht gemeldet
+ * (D62), es gäbe also nie einen Toast in diesem Zustand. Ein Logo dafür wären
+ * eingebaute Bytes, die nie gelesen werden.
+ */
+const TOAST_DIR = join(ICON_DIR, "toast");
+mkdirSync(TOAST_DIR, { recursive: true });
+
+const TOAST_SIZE = 192;
+
+for (const state of TRAY_STATES.filter((s) => s.key !== "disconnected")) {
+  write(
+    join(TOAST_DIR, `${state.key}-${TOAST_SIZE}.png`),
+    encodePng(
+      TOAST_SIZE,
+      TOAST_SIZE,
+      render(TOAST_SIZE, {
+        color: COLORS.inkTief,
+        tile: { color: state.color, radius: TILE_RADIUS },
+      }),
+    ),
+    state.note,
+  );
+}
+
+
 /* ------------------------------------------------------------- Ausgabe ---- */
 
 const spalte = Math.max(...written.map((w) => w.path.length));
