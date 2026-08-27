@@ -69,14 +69,19 @@ Luchsr/
 │   ├── mark-studio.mjs        Vergleichsblätter — Entwurfsprotokoll zu D22/D23
 │   ├── make-sounds.mjs        DIE HINWEISTÖNE: 6 Familien, Synthese, Selbstprüfung
 │   ├── third-party.ps1        erzeugt THIRD-PARTY.md aus den Abhängigkeitsgraphen
+│   ├── screenshots.ps1        nimmt docs/bilder/popup-*.png headless auf
 │   └── checkmk-probe.ps1      Diagnose gegen die REST-API, ohne Luchsr
 ├── handover-design/           Design-Export, REFERENZ — nie verändern, NICHT versioniert
 ├── docs/
-│   └── bilder/                ERZEUGT — banner.png, scripts/make-icons.mjs
+│   └── bilder/                ERZEUGT — banner.png aus make-icons.mjs,
+│                              popup-*.png aus scripts/screenshots.ps1
 ├── packaging/
 │   └── defaults.example.json  Vorlage für die Maschinenvorgaben
+├── mockup.html                WERKZEUG — Einstieg für die Bildaufnahme, nicht gebaut
 ├── src/                       Frontend
 │   ├── main.tsx
+│   ├── dev/mockup.tsx         WERKZEUG — rendert App mit gefälschter IPC-Schicht
+│   ├── quelltext.test.ts      prüft: keine NUL-Bytes, gültiges UTF-8
 │   ├── App.tsx                Popup-Rahmen: Ersteinrichtung, Liste, Einstellungen
 │   ├── assets/fonts/          8 woff2, latin + latin-ext
 │   ├── assets/icons/          luchsr-mark.svg (currentColor), luchsr-tile.svg
@@ -480,6 +485,12 @@ Alles variabel, **keine hartkodierten Werte** — jeder Parameter ist im Einstel
 | D108 | Das **Kopfbild des README trägt keine Wortmarke**, nur die Bildmarke | Die Schriften des Projekts sind Manrope und IBM Plex Mono. Ein Rasterizer, der keine Schrift zeichnen kann, würde daraus zwangsläufig eine andere Schrift machen — und ein selbstgemalter Schriftzug wäre eine dritte, die nirgends sonst vorkommt. Die Überschrift des README ist der Wortmarke näher. Der Streifen am unteren Rand trägt die sechs Zustandsfarben und ist nicht Dekoration: er sagt, worum es geht, bevor die erste Zeile gelesen ist |
 | D109 | Die Zustandstafel im README zeigt die **ausgelieferten** Icon-Dateien, keine Nachbildungen | `src-tauri/icons/tray/*-32.png` sind dieselben Dateien, die im Infobereich landen. Ein Screenshot oder eine eigens gemalte Tafel wäre eine zweite Wahrheit, die beim nächsten Palettenwechsel falsch wird — und niemand würde es merken, weil ein Bild nicht kompiliert wird |
 | D110 | Zwei `#[ignore]`-Tests greifen nach draussen: einer schickt echte Toasts, einer fragt wirklich bei GitHub | Beide sind Werkzeuge, keine Wächter. Ein Test, der bei jedem Durchlauf ins Internet greift, scheitert an einem Proxy, einem Anfragelimit oder einer Wartung — und dann steht eine rote Zeile, die nichts über dieses Projekt aussagt. Wozu er dennoch gut ist: er belegt, dass die **Anfrage** stimmt. Ohne User-Agent lehnt GitHub mit 403 ab, und das kann keine aufgezeichnete Antwort beweisen. Der Live-Test bricht deshalb bei Unerreichbarkeit **nicht** ab, sondern schreibt die Ursache — nur ein falsches Urteil bei erfolgreicher Antwort lässt ihn scheitern |
+| D111 | **Gefundener Fehler (Audit):** in `SoundPicker.tsx` stand ein Sonderwert mit vorangestelltem **NUL-Byte** | Der Trick sollte eine Kollision mit Klangkennungen ausschliessen („keine Kennung kann so heissen"). Das Argument stimmte, hatte aber zwei Folgen: Git und `grep` behandelten die Datei als **Binärdatei** — im Diff stand `Bin 3412 -> 4218 bytes` statt der geänderten Zeilen, `grep` meldete nur „Binary file matches". Eine Quelldatei, die man nicht diffen kann, ist eine, in der eine Änderung unbemerkt bleibt. Und das Argument hing an einer Zusage des Rust-Teils, an die niemand erinnert wird. Ersetzt durch ein **Präfix** (`builtin:`): damit ist die Kollision der Bauart wegen ausgeschlossen, nicht per Konvention. `src/quelltext.test.ts` prüft jetzt mechanisch, dass keine Textdatei ein NUL-Byte enthält und jede gültiges UTF-8 ist — und hat beim ersten Lauf **sich selbst** beanstandet, weil das Ersatzzeichen wörtlich in seiner Quelle stand. Damit ist gleich belegt, dass er sucht und nicht nur besteht |
+| D112 | **Gefundener Fehler (Audit):** vier Aufrufe ins Backend verschluckten ihren Fehlschlag mit `.catch(() => undefined)` | Dieselbe Klasse wie D101. Zwei davon zeigen die Meldung jetzt: der Projektlink und „Zum Release" — ein Link, der nichts tut, ist von einem kaputten Knopf nicht zu unterscheiden. Auch das Vorhören eines Klangs: bei einem Knopf, dessen Erfolg man **hört**, ist Stille genau die Falle aus D61. Die zwei anderen bleiben still, protokollieren aber: eine Klangliste, die nur „Kein Ton" enthält, und ein leeres Kommentarfeld sehen wie Einstellungen aus und sind Fehlschläge. Zusätzlich belegt: das Frontend benutzt **keine** `@tauri-apps/api/window` mehr, die Fehlerklasse aus D101 ist damit strukturell weg |
+| D113 | Das Audit hat **keine** Panikstelle im Produktionscode gefunden; jedes `expect()` ist einzeln geprüft | Kein `unwrap()`, kein `panic!`, kein `todo!` ausserhalb der Tests. Die verbleibenden `expect()` sind belegbar sicher: Mutex-Sperren (eine Panik dort setzt eine frühere voraus), Serialisierung von Typen ohne Sonderfälle, eine auf drei Durchläufe begrenzte Schleife mit Rückfall, und `cached.as_ref().expect("gerade gesetzt")` — dort ist die Bedingung `!= Some(..)` bei `None` zwangsläufig wahr, der Wert also gesetzt. Nachgelesen, nicht überflogen |
+| D114 | **Gefundene Ungenauigkeit (Audit):** das README behauptete, die Liste sei „nach Host gruppiert" | Sie ist es nicht, und der wirkliche Entwurf ist besser: nur wenn ein Host **selbst** ausgefallen ist, klappen seine Dienste unter ihm zusammen — ihre Meldungen sind dann Folge und nicht eigener Befund. Aufgefallen beim Erzeugen der Bilder: das erste Bild zeigte keine Gruppen, und die Frage „ist das ein Fehler?" führte zum Quelltext statt zu einer Vermutung. Beschreibung korrigiert und Beispieldaten so gewählt, dass das Verhalten im Bild zu sehen ist |
+| D115 | Die Bilder der Oberfläche werden von einem **Werkzeug im Repository** erzeugt (`src/dev/mockup.tsx`, `scripts/screenshots.ps1`) und nicht von Hand aufgenommen | Ein Screenshot ist eine erzeugte Datei; für Icons, Klänge und `THIRD-PARTY.md` gilt in diesem Projekt, dass der Erzeuger mitliegt. Bilder veralten schneller als Icons, und ohne Erzeuger kann sie niemand auffrischen. Gerendert wird `App` selbst — die Attrappe fälscht **nur** die IPC-Schicht, baut also keine Komponente nach. Das ist der Unterschied zu D39, wo ein Musterblatt gelöscht wurde, weil es Komponenten ein zweites Mal einbaute. Die Beispieldaten sind getypt: eine Schemaänderung bricht `npm run typecheck` hier, die Attrappe kann also nicht stillschweigend verrotten. Beim ersten Typecheck ist genau das passiert — ein Feld von `LoadOutcome` fehlte. Aufgenommen wird headless über Edge, weil so eine **Datei** entsteht und nicht nur ein Bild auf dem Schirm; dass `mockup.html` nicht im Auslieferungsbau landet, ist an `dist/` nachgeprüft |
+| D116 | Die Bilder tragen **erfundene** Hosts und Meldungen, und das README sagt das | Aus einer echten Umgebung dürfen keine Namen in ein öffentliches Repository. Die Meldungstexte sind der Form nach echt — eine Liste mit „foo/bar" zeigt nicht, ob die Spaltenbreiten bei wirklichen Ausgaben tragen. Der Hinweis steht ausdrücklich darunter: ein Bild, das aussieht wie eine Aufnahme aus dem Betrieb, soll nicht für eine gehalten werden |
 
 ### Konsequenz aus D9 — prüfbare Invariante
 
@@ -659,6 +670,9 @@ Nach Slice 10:
   412 Rust-Tests, 47 Frontend-Tests
 - **Update-Check und README-Bilder** — Knopf „Nach Updates suchen" in der Fusszeile,
   Kopfbild und Zustandstafel im README (D103–D110). 428 Rust-Tests, 47 Frontend-Tests
+- **Audit und Bilder der Oberfläche** — NUL-Byte in einer Quelldatei, vier verschluckte
+  Fehlschläge, eine falsche Aussage im README; Aufnahmen der echten Anwendung mit
+  erfundenen Daten (D111–D116). 430 Rust-Tests, 50 Frontend-Tests
 
 ## Bei Unklarheit
 

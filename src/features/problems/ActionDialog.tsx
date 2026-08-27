@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { error as logError } from "@tauri-apps/plugin-log";
 import { Check, Wrench, X } from "lucide-react";
 
 import { Button, Callout } from "@/components";
@@ -62,7 +63,12 @@ export function ActionDialog({ action, problem, onClose, onDone }: ActionDialogP
       .then((text) => {
         if (!verworfen) setComment(text);
       })
-      .catch(() => undefined);
+      // Der Dialog öffnet auch ohne Vorlage — der Benutzer schreibt dann
+      // selbst. Ins Protokoll gehört es trotzdem: ein leeres Feld sieht wie
+      // eine leere Vorlage aus und nicht wie ein Fehlschlag.
+      .catch((raw: unknown) => {
+        void logError(`Kommentarvorlage nicht abrufbar: ${String(raw)}`);
+      });
     return () => {
       verworfen = true;
     };

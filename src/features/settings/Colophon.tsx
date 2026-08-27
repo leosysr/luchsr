@@ -36,6 +36,16 @@ type CheckState =
 export function Colophon() {
   const [info, setInfo] = useState<AboutInfo | null>(null);
   const [check, setCheck] = useState<CheckState>({ phase: "idle" });
+  /**
+   * Fehlschlag beim Öffnen des Browsers.
+   *
+   * Eigener Zustand, weil er nichts mit dem Update-Check zu tun hat. Und
+   * überhaupt einer: vorher stand hier `.catch(() => undefined)`, und ein Link,
+   * der nichts tut, ist genau der Fehler, der beim Schliessknopf Wochen
+   * unentdeckt geblieben ist (D101). Die Meldung aus dem Backend nennt auch die
+   * Adresse — dann kann man sie notfalls selbst öffnen.
+   */
+  const [linkFehler, setLinkFehler] = useState<string | null>(null);
 
   useEffect(() => {
     // Scheitert der Abruf, bleibt die Zeile weg. Eine Fehlermeldung über eine
@@ -82,7 +92,9 @@ export function Colophon() {
           {laeuft ? t("update.checking") : t("update.check")}
         </button>
 
-        {check.phase === "done" ? <Ergebnis report={check.report} /> : null}
+        {check.phase === "done" ? (
+          <Ergebnis report={check.report} onError={setLinkFehler} />
+        ) : null}
         {check.phase === "failed" ? (
           <span className="text-state-warn selectable">{check.message}</span>
         ) : null}
@@ -92,7 +104,10 @@ export function Colophon() {
         <button
           type="button"
           onClick={() => {
-            openProjectPage().catch(() => undefined);
+            setLinkFehler(null);
+            openProjectPage().catch((raw: unknown) =>
+              setLinkFehler(asCommandError(raw).message),
+            );
           }}
           className="inline-flex items-center gap-1 rounded-xs text-accent underline decoration-dotted underline-offset-2 transition-colors duration-fast ease-out hover:text-accent-solid-hover focus:outline-none focus-visible:ring-input"
         >
@@ -100,6 +115,8 @@ export function Colophon() {
           {info.projectUrl.replace(/^https:\/\//, "")}
         </button>
       </p>
+
+      {linkFehler ? <p className="text-state-warn selectable">{linkFehler}</p> : null}
     </div>
   );
 }
@@ -111,7 +128,13 @@ export function Colophon() {
  * Bei einem Entwicklungsbau ist der Unterschied gerade der interessante — und
  * „aktuell" wäre dort schlicht falsch.
  */
-function Ergebnis({ report }: { report: UpdateReport }) {
+function Ergebnis({
+  report,
+  onError,
+}: {
+  report: UpdateReport;
+  onError: (message: string) => void;
+}) {
   if (report.verdict === "upToDate") {
     return <span>{t("update.upToDate")}</span>;
   }
@@ -126,7 +149,13 @@ function Ergebnis({ report }: { report: UpdateReport }) {
       <button
         type="button"
         onClick={() => {
-          openReleasePage(report.releaseUrl).catch(() => undefined);
+          // Auch hier gezeigt statt verschluckt. Das Backend lehnt eine Adresse
+          // ab, die nicht unter den Releases dieses Repositorys liegt — bliebe
+          // die Ablehnung stumm, sähe es wie ein kaputter Knopf aus statt wie
+          // die Sicherung, die sie ist.
+          openReleasePage(report.releaseUrl).catch((raw: unknown) =>
+            onError(asCommandError(raw).message),
+          );
         }}
         className="inline-flex items-center gap-1 rounded-xs text-accent underline decoration-dotted underline-offset-2 transition-colors duration-fast ease-out hover:text-accent-solid-hover focus:outline-none focus-visible:ring-input"
       >

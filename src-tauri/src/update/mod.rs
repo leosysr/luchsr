@@ -476,6 +476,44 @@ mod tests {
         }
     }
 
+    /* ------------------------------------------------------- Drahtform --- */
+
+    /// Die Namen, auf die das Frontend vergleicht.
+    ///
+    /// Steht in `src/lib/types.ts` als `"updateAvailable" | "upToDate" |
+    /// "ahead"` und in `Colophon.tsx` als Vergleich. Weicht die
+    /// Serialisierung davon ab, greift kein Vergleich mehr — und weil
+    /// TypeScript den Rust-Typ nicht kennt, fällt es nicht beim Übersetzen auf,
+    /// sondern als falscher Satz im Fenster. Deshalb hier festgenagelt.
+    #[test]
+    fn die_urteile_serialisieren_wie_das_frontend_erwartet() {
+        let paare = [
+            (Verdict::UpdateAvailable, "\"updateAvailable\""),
+            (Verdict::UpToDate, "\"upToDate\""),
+            (Verdict::Ahead, "\"ahead\""),
+        ];
+        for (urteil, erwartet) in paare {
+            assert_eq!(
+                serde_json::to_string(&urteil).expect("serialisierbar"),
+                erwartet
+            );
+        }
+    }
+
+    /// Ebenso die Feldnamen des Berichts.
+    #[test]
+    fn der_bericht_traegt_camelcase_feldnamen() {
+        let bericht = evaluate("1.2.0", &antwort("v1.3.0")).expect("auswertbar");
+        let json = serde_json::to_string(&bericht).expect("serialisierbar");
+        for feld in ["\"verdict\"", "\"current\"", "\"latest\"", "\"releaseUrl\""] {
+            assert!(json.contains(feld), "{feld} fehlt in {json}");
+        }
+        assert!(
+            !json.contains("release_url"),
+            "Schlangenschrift im Drahtformat: {json}"
+        );
+    }
+
     /* --------------------------------------------------------- Adressen -- */
 
     #[test]

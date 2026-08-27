@@ -33,8 +33,10 @@ SmartScreen-Hinweis.
 
 * Ein Tray-Icon, das die schlimmste offene Meldung als Farbe zeigt — sechs
   Zustände, bei 16 px unterscheidbar.
-* Ein rahmenloses Popup am Infobereich mit der Problemliste: nach Host
-  gruppiert, virtualisiert, brauchbar bei 80 gleichzeitigen Problemen.
+* Ein rahmenloses Popup am Infobereich mit der Problemliste, virtualisiert und
+  brauchbar bei 80 gleichzeitigen Problemen. Ist ein **Host selbst ausgefallen**,
+  klappen seine Dienste unter ihm zusammen — ihre Meldungen sind dann Folge und
+  nicht eigener Befund.
 * Filter nach Freitext und Statusklasse, Detailansicht mit vollständiger
   `plugin_output`.
 * **Quittieren** und **Wartungszeit setzen**, beides einzeln freizugeben und
@@ -67,6 +69,26 @@ Die Farbtöne liegen mindestens 16° auseinander, weil bei einer 16-px-Fläche
 allein der Farbton entscheidet und nicht die Helligkeit. In der Liste und in den
 Benachrichtigungen kommt zu jeder Farbe ein Symbol und ein Kürzel: Status wird
 nie allein über Farbe kodiert.
+
+### So sieht es aus
+
+<img src="docs/bilder/popup-problemliste.png" alt="Problemliste im Popup" width="780">
+
+Das Popup in seiner echten Grösse, 780 × 600. `sw-core-02` ist selbst
+ausgefallen, seine beiden Dienste sind unter ihm zusammengeklappt. Der
+durchgestrichene Augen-Knopf rechts zeigt an, dass ein bearbeitetes Problem
+ausgeblendet ist — quittierte und geplante verschwinden nicht, sie stehen nur
+nicht im Weg.
+
+<img src="docs/bilder/popup-einstellungen.png" alt="Klangauswahl in den Einstellungen" width="780">
+
+Ein Klang je Ereignis, jeder abschaltbar; das Dreieck spielt ihn vor. Steht ein
+Ereignis auf „Kein Ton", ist das Dreieck ausgegraut — ein Knopf, der stumm
+nichts tut, liest sich sonst wie ein Fehler.
+
+> Die Bilder zeigen die **echte Oberfläche** mit erfundenen Daten: gerendert
+> wurde die ausgelieferte Anwendung, nur die Antworten des Backends waren
+> vorbereitet. Hosts und Meldungen sind erdacht, keine reale Umgebung.
 
 ## Installation
 
@@ -239,13 +261,33 @@ Gegenprobe mit `--invert rustls` muss „nothing to print" ergeben.
 
 ### Erzeugte Dateien
 
-Zwei Dinge im Baum werden erzeugt und **nicht von Hand bearbeitet**:
+Vier Dinge im Baum werden erzeugt und **nicht von Hand bearbeitet**:
 
 ```bash
 node scripts/make-icons.mjs      # Icons und README-Banner aus scripts/mark.mjs
 node scripts/make-sounds.mjs     # Hinweistöne nach src-tauri/sounds/
 pwsh -File scripts/third-party.ps1   # THIRD-PARTY.md aus den Abhängigkeiten
 ```
+
+Die Bilder der Oberfläche brauchen einen laufenden Dev-Server, deshalb zwei
+Schritte:
+
+```bash
+npm run dev
+```
+
+```bash
+pwsh -File scripts/screenshots.ps1
+```
+
+Aufgenommen wird die **echte Anwendung** — `src/dev/mockup.tsx` rendert `App`
+und fälscht nur die Antworten des Backends. Ein nachgemaltes Bild wäre eine
+zweite Wahrheit, die beim nächsten Umbau falsch wird, ohne dass es jemand
+merkt: ein Bild kompiliert nicht. Die Beispieldaten sind getypt, `npm run
+typecheck` fängt eine Schemaänderung also mit.
+
+`mockup.html` landet **nicht** im Auslieferungsbau: Vites Vorgabe für `build`
+ist allein `index.html`. Nachgeprüft an `dist/`, nicht angenommen.
 
 ### Codesignatur
 
