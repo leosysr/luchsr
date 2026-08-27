@@ -13,10 +13,13 @@
 //! **eine** Sammelmeldung statt der restlichen.
 
 pub mod decide;
+pub mod identity;
 pub mod sound;
+pub mod toast;
+
+use std::path::PathBuf;
 
 use tauri::{AppHandle, Runtime};
-use tauri_plugin_notification::NotificationExt;
 
 use crate::checkmk::Snapshot;
 use crate::commands::AppState;
@@ -47,6 +50,40 @@ pub fn split_for_toasts(total: usize) -> (usize, usize) {
 /// Formuliert die Sammelmeldung für die abgeschnittenen Ereignisse.
 pub fn overflow_body(rest: usize) -> String {
     format!("und {rest} weitere — Fenster öffnen für die vollständige Liste")
+}
+
+/// Baut die Sammelmeldung als vollwertiges Ereignis.
+///
+/// Stufe und Zustand kommen vom **dringlichsten** der übrigen Ereignisse,
+/// damit das Logo die Farbe des Schlimmsten trägt. Eine grüne Sammelmeldung,
+/// hinter der fünfundzwanzig kritische Probleme stehen, wäre die
+/// Fehlinformation aus D26 in anderer Gestalt: sie sähe aus wie eine
+/// Entwarnung.
+pub fn overflow_event(rest: &[NotifyEvent], count: usize) -> NotifyEvent {
+    let schlimmstes = rest
+        .iter()
+        .find(|e| e.kind == EventKind::Critical)
+        .or_else(|| rest.iter().find(|e| e.kind == EventKind::Warning));
+
+    NotifyEvent {
+        kind: schlimmstes.map_or(EventKind::Recovery, |e| e.kind),
+        state: schlimmstes.and_then(|e| e.state),
+        title: text::APP.to_owned(),
+        body: overflow_body(count),
+    }
+}
+
+/// Wo die Toast-Logos liegen.
+///
+/// `%LOCALAPPDATA%\de.leosysr.luchsr\assets`, also neben dem Protokoll — und
+/// bewusst **nicht** neben der ausführbaren Datei: dort wäre es im
+/// Entwicklungsbau `target\debug` und nach der Installation ein Ordner unter
+/// `%ProgramFiles%`, in den ein gewöhnlicher Benutzer nicht schreiben darf.
+pub fn asset_dir<R: Runtime>(app: &AppHandle<R>) -> Option<PathBuf> {
+    app.path()
+        .app_local_data_dir()
+        .ok()
+        .map(|dir| dir.join("assets"))
 }
 
 /// Wählt **einen** Klang für eine ganze Runde.
@@ -109,10 +146,10 @@ pub fn announce<R: Runtime>(app: &AppHandle<R>, snapshot: &Snapshot) {
 
     let (einzeln, restlich) = split_for_toasts(outcome.events.len());
     for event in outcome.events.iter().take(einzeln) {
-        send(app, &event.title, &event.body);
+        send(app, event);
     }
     if restlich > 0 {
-        send(app, text::APP, &overflow_body(restlich));
+        send(app, &overflow_event(&outcome.events[einzeln..], restlich));
     }
 
     // Der Ton kommt **einmal** je Runde, nicht je Meldung — fünf Toasts sollen
@@ -131,13 +168,21 @@ pub fn announce<R: Runtime>(app: &AppHandle<R>, snapshot: &Snapshot) {
 ///
 /// Ein nicht angekommener Toast ist ärgerlich, aber kein Grund, die
 /// Abrufschleife zu stören — die Liste im Fenster zeigt den Zustand ohnehin.
-fn send<R: Runtime>(app: &AppHandle<R>, title: &str, body: &str) {
-    let mut builder = app.notification().builder().title(title);
-    if !body.trim().is_empty() {
-        builder = builder.body(body);
-    }
-    if let Err(error) = builder.show() {
-        log::warn!("Benachrichtigung „{title}“ liess sich nicht zeigen: {error}");
+///
+/// Die AppUserModelID ist der Bundle-Identifier aus `tauri.conf.json`. Sie
+/// hier abzulesen statt sie zu wiederholen hält beide Stellen zusammen: unter
+/// derselben Kennung trägt [`identity`] Name und Symbol in die Registry ein,
+/// und laufen die zwei auseinander, bleibt die Kopfzeile des Toasts leer.
+fn send<R: Runtime>(app: &AppHandle<R>, event: &NotifyEvent) {
+    let Some(dir) = asset_dir(app) else {
+        log::warn!("Kein lokales Datenverzeichnis — Toast ohne Logo unterbleibt");
+        return;
+    };
+    if let Err(error) = toast::send(&app.config().identifier, &dir, event) {
+        log::warn!(
+            "Benachrichtigung „{}“ liess sich nicht zeigen: {error:?}",
+            event.title
+        );
     }
 }
 
@@ -176,11 +221,50 @@ mod tests {
         assert_eq!(einzeln + rest, 30, "es darf nichts verloren gehen");
     }
 
+    /* -------------------------------------------------- Sammelmeldung --- */
+
+    #[test]
+    fn die_sammelmeldung_traegt_die_farbe_des_schlimmsten() {
+        let rest = [
+            ereignis(EventKind::Recovery),
+            ereignis(EventKind::Critical),
+            ereignis(EventKind::Warning),
+        ];
+        let sammel = overflow_event(&rest, 3);
+        assert_eq!(sammel.kind, EventKind::Critical);
+        assert_eq!(sammel.state, Some(crate::checkmk::ProblemState::Crit));
+    }
+
+    #[test]
+    fn ohne_kritisches_reicht_die_warnung() {
+        let rest = [ereignis(EventKind::Recovery), ereignis(EventKind::Warning)];
+        assert_eq!(overflow_event(&rest, 2).kind, EventKind::Warning);
+    }
+
+    #[test]
+    fn nur_entwarnungen_ergeben_eine_entwarnung() {
+        let rest = [ereignis(EventKind::Recovery)];
+        let sammel = overflow_event(&rest, 1);
+        assert_eq!(sammel.kind, EventKind::Recovery);
+        assert_eq!(sammel.state, None);
+    }
+
+    #[test]
+    fn die_sammelmeldung_nennt_luchsr_als_titel() {
+        assert_eq!(overflow_event(&[], 7).title, text::APP);
+        assert!(overflow_event(&[], 7).body.contains('7'));
+    }
+
     /* ----------------------------------------------------- Klangauswahl -- */
 
     fn ereignis(kind: EventKind) -> NotifyEvent {
         NotifyEvent {
             kind,
+            state: match kind {
+                EventKind::Critical => Some(crate::checkmk::ProblemState::Crit),
+                EventKind::Warning => Some(crate::checkmk::ProblemState::Warn),
+                EventKind::Recovery => None,
+            },
             title: "t".into(),
             body: "b".into(),
         }

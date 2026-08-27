@@ -35,8 +35,9 @@ SmartScreen-Hinweis.
   `plugin_output`.
 * **Quittieren** und **Wartungszeit setzen**, beides einzeln freizugeben und
   standardmässig aus.
-* Windows-Benachrichtigungen bei Statusänderungen, mit kurzen Hinweistönen —
-  ein Klang je Ereignis, jeder abschaltbar.
+* Windows-Benachrichtigungen bei Statusänderungen — mit Luchsr als Absender und
+  einem Zustandslogo in der Farbe des Tray-Icons, dazu kurze Hinweistöne: ein
+  Klang je Ereignis, jeder abschaltbar.
 * CSV-Export der vollständigen Liste.
 
 Nicht Teil des Projekts: andere Monitoring-Backends, Konfigurationsänderungen an

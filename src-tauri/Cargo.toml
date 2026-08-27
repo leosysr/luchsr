@@ -25,7 +25,6 @@ tauri-build = { version = "2", features = [] }
 # --- Tauri ------------------------------------------------------------------
 # tray-icon und image-png werden ab Slice 5 für das Infobereich-Icon gebraucht.
 tauri = { version = "2", features = ["tray-icon", "image-png"] }
-tauri-plugin-notification = "2"   # Slice 8
 tauri-plugin-autostart = "2"      # Slice 9
 tauri-plugin-single-instance = "2" # Slice 9
 tauri-plugin-opener = "2"         # "CheckMK im Browser öffnen"
@@ -35,6 +34,18 @@ tauri-plugin-dialog = "2"        # Speicherdialog für den CSV-Export
 # Signalton über PlaySoundW aus winmm.dll. Dieselbe Hauptversion, die Tauri
 # ohnehin im Baum hat — eine zweite wäre eine zweite Übersetzungseinheit.
 windows-sys = { version = "0.61", features = ["Win32_Media_Audio"] }
+
+# --- Benachrichtigungen -----------------------------------------------------
+# Direkt statt über tauri-plugin-notification. Das Plugin setzt die
+# AppUserModelID nur ausserhalb von target\debug|release und verwirft das
+# Symbol — über das Plugin ist damit weder der Name noch das Logo im Toast
+# erreichbar. Begründung im Kopf von src/notify/toast.rs.
+#
+# Beide Crates lagen ohnehin im Baum: tauri-winrt-notification unter dem
+# Plugin, windows-registry unter reqwest. Als direkte Abhängigkeiten kosten
+# sie keine zusätzliche Übersetzungseinheit.
+tauri-winrt-notification = "0.7"
+windows-registry = "0.6"
 
 # --- Serialisierung ---------------------------------------------------------
 serde = { version = "1", features = ["derive"] }

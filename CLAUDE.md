@@ -32,8 +32,11 @@ Version steht ausschließlich in `tauri.conf.json` (Single Source of Truth).
 - Plugins: `tauri-plugin-autostart`, `tauri-plugin-single-instance` (beide Slice 9),
   `tauri-plugin-log` (siehe D32; die JS-Seite `@tauri-apps/plugin-log` braucht `log:default`
   in `capabilities/default.json`, damit das Frontend in dieselbe Datei schreiben kann),
-  `tauri-plugin-dialog` und `tauri-plugin-notification` — beide werden **aus Rust**
-  aufgerufen und brauchen deshalb **keine** Kapazität
+  `tauri-plugin-dialog` — wird **aus Rust** aufgerufen und braucht deshalb **keine** Kapazität
+- Benachrichtigungen: `tauri-winrt-notification` **direkt**, ohne
+  `tauri-plugin-notification` — siehe D91. Dazu `windows-registry` für die
+  AppUserModelID. Beide Crates lagen ohnehin im Baum (unter dem Plugin bzw. unter
+  reqwest) und kosten als direkte Abhängigkeit keine zusätzliche Übersetzungseinheit
 - Signalton: `windows-sys` mit `Win32_Media_Audio` für `PlaySoundW`. Dieselbe
   Hauptversion, die Tauri ohnehin im Baum hat
 - Icons: `lucide-react` als npm-Abhängigkeit (nicht der CDN-Fetch aus dem Design-Export)
@@ -115,7 +118,8 @@ Luchsr/
     ├── capabilities/
     │   └── default.json       Berechtigungen, pro Slice erweitert
     ├── icons/                 App-Icon 32/128/256/512 + icon.ico
-    │   └── tray/              sechs Zustände × 16 und 32 px (Slice 5)
+    │   ├── tray/              sechs Zustände × 16 und 32 px (Slice 5)
+    │   └── toast/             fünf Zustände × 192 px + app-64.png, ins Binary eingebaut
     ├── sounds/                ERZEUGT — 24 WAV, scripts/make-sounds.mjs, ins Binary eingebaut
     └── src/
         ├── main.rs            windows_subsystem = "windows" im Release
@@ -136,6 +140,8 @@ Luchsr/
         ├── notify/            Benachrichtigungen (Slice 8)
         │   ├── mod.rs         Toasts senden, Deckelung, Anbindung
         │   ├── decide.rs      WAS gemeldet wird — rein und getestet
+        │   ├── toast.rs       Toast-Aufbau: Logo, Textzeilen, Auspacken
+        │   ├── identity.rs    AppUserModelID in der Registry — Name und Symbol
         │   └── sound.rs       PlaySoundW, nur WAV, Formatprüfung
         ├── export/            CSV-Ausgabe (Slice 6)
         │   └── mod.rs         to_csv() rein und getestet, Trennzeichen/BOM/Formelabwehr
@@ -450,6 +456,13 @@ Alles variabel, **keine hartkodierten Werte** — jeder Parameter ist im Einstel
 | D88 | Zum Release gehören **SHA256-Prüfsummen** | Die Pakete sind nicht codesigniert (nach Absprache). Eine veröffentlichte Prüfsumme ist der Ersatz, der wenigstens die Frage beantwortet, ob die geladene Datei die gebaute ist. Ohne sie hat ein Herunterladender **keine** Möglichkeit, das zu prüfen |
 | D89 | Für „Datei an ein Release hängen" wird das vorinstallierte `gh` benutzt, keine Fremd-Action | Eine Action, die Schreibrechte auf das Repository bekommt, ist eine Abhängigkeit in der Lieferkette. Für einen Aufruf, den `gh` mit einem Befehl erledigt, ist das der falsche Tausch. Die Argumentliste wird als Array übergeben und mit dem Aufrufoperator ausgeführt — `@`-Splatting an ein natives Programm verhält sich zwischen den PowerShell-Fassungen unterschiedlich |
 | D90 | Ein **manueller** Workflow-Lauf legt kein Release an, sondern nur ein Artefakt | Sonst füllt sich die Release-Liste mit Testbauten, und die Frage „welches ist die richtige Fassung" ist genau die, die ein Release beantworten soll |
+| D91 | Der Toast wird **direkt** über `tauri-winrt-notification` gebaut; `tauri-plugin-notification` ist entfernt | Über das Plugin sind weder Name noch Logo erreichbar, und beides ist im Quelltext der Abhängigkeiten nachgelesen, nicht vermutet. Erstens setzt das Plugin die AppUserModelID **nur**, wenn die ausführbare Datei nicht unter `target\debug` oder `target\release` liegt — im Entwicklungsbau bleibt sie ungesetzt, und `notify-rust` fällt dann auf `Toast::POWERSHELL_APP_ID` zurück. Genau daher stand „Windows PowerShell" in der Kopfzeile. Zweitens liest die Windows-Umsetzung von `notify-rust` für das Bild nur `path_to_image`, während das Plugin `icon` setzt: das Symbol wird verworfen, egal was man angibt. Die Crate lag ohnehin im Baum, unter dem Plugin — der Tausch entfernt eine Abhängigkeit, statt eine hinzuzufügen |
+| D92 | Die AppUserModelID wird **selbst** unter `HKCU\Software\Classes\AppUserModelId\<AUMID>` eingetragen und bei **jedem** Start abgeglichen | Ohne Eintrag hat Windows keine Quelle für Name und Symbol in der Kopfzeile. Der Schlüssel liegt im Benutzerzweig und braucht keine erhöhten Rechte. Abgeglichen statt einmalig gesetzt, aus derselben Lehre wie D80: `IconUri` ist ein **Pfad**, und dass ein Eintrag existiert, sagt nichts darüber, ob er auf eine vorhandene Datei zeigt. `ShowInSettings` steht auf 1, sonst fände der Benutzer in den Windows-Benachrichtigungseinstellungen keinen Eintrag — und hätte keinen Weg, die Toasts dort zu regeln |
+| D93 | Die Toast-Logos sind per `include_bytes!` eingebaut, werden aber beim Start **auf die Platte ausgepackt** | Anders als der Klang, der mit `SND_MEMORY` aus dem Speicher läuft (D64), lädt Windows das Bild eines Toasts ausschliesslich über eine `file:///`-Adresse — aus dem Speicher geht es nicht. Eingebaut bleiben sie trotzdem, damit dieselbe Begründung greift: eine Datei, die es zur Laufzeit gibt, kann fehlen. Geschrieben wird nur, was fehlt oder abweicht; damit heilt sich der Bestand selbst, ohne bei jedem Start sinnlos 16 KB zu schreiben. Ziel ist `%LOCALAPPDATA%`, nicht der Ordner neben der Exe: dort wäre es im Entwicklungsbau `target\debug` und nach der Installation ein Verzeichnis unter `%ProgramFiles%`, in das ein gewöhnlicher Benutzer nicht schreiben darf |
+| D94 | Das Logo unterscheidet **fünf** Zustände, obwohl `EventKind` nur drei Stufen kennt — dafür führt `NotifyEvent` den Zustand als eigenes Feld mit | Die Stufe bestimmt den Klang und fasst CRIT, DOWN und UNREACHABLE zusammen. Die Farbe soll das nicht: CRIT und DOWN sind zwei getrennte Farbtöne (D23), und im Toast ist genug Platz, den Unterschied zu zeigen. Den Zustand aus dem Titel zurückzulesen wäre die Alternative gewesen — der Titel ist aber Text für Menschen und keine Schnittstelle. Eine Entwarnung ist grün, aus welchem Zustand sie auch kommt |
+| D95 | **Gefundener Fehler:** `problem_event` setzte ausnahmslos `EventKind::Critical`. `EventKind::Warning` wurde von `decide` **nie** erzeugt | Eine neue WARN oder UNKNOWN bekam damit den Klang für Kritisches, und die Auswahl „Warnung" in den Einstellungen war ohne jede Wirkung. Die Zuordnung stand seit Slice 8 im Doc-Kommentar von `EventKind` und nie im Code. Unentdeckt blieb es, weil die Klangtests ihre Ereignisse von Hand bauen: die Naht zwischen `decide` und `loudest` war nie durchlaufen. Aufgefallen ist es erst, als das Logo dieselbe Stufe brauchte. Jetzt steht die Zuordnung in `kind_of`, und ein Test prüft sie **durch `decide` hindurch** statt an einem selbstgebauten Ereignis |
+| D96 | Die Sammelmeldung trägt Stufe und Farbe des **dringlichsten** übergangenen Ereignisses | Sie hatte vorher gar keine Stufe — als Titel „Luchsr" und einen Rumpf. Mit einem farbigen Logo wäre sie ohne Zustand grün geworden: eine Entwarnung im Aussehen, hinter der fünfundzwanzig kritische Probleme stehen. Das ist die Fehlinformation aus D26 in anderer Gestalt |
+| D97 | Ein `#[ignore]`-Test schickt **echte** Toasts zum Ansehen | Ob ein Toast richtig *aussieht*, kann keine Zusicherung beantworten — das entscheidet das Auge, und zwar an einem echten Toast. Ein Test, der ungefragt Benachrichtigungen auf den Bildschirm wirft, gehört aber nicht in einen Durchlauf, den jemand nebenbei startet, und auf einem Bauläufer sieht ohnehin niemand hin. Also ein Werkzeug, kein Wächter: `cargo test -- --ignored toast_augenschein`. Dieselbe Haltung wie bei der Bildmarke — jede Runde wurde gerastert und angesehen, nicht beschrieben |
 
 ### Konsequenz aus D9 — prüfbare Invariante
 
@@ -599,6 +612,11 @@ Nach jedem Slice anhalten und dem Benutzer das Ergebnis zeigen, bevor es weiterg
 8. ✅ **Benachrichtigungen** — Toasts bei Änderung, Entwarnungen, Deckelung, 24 erzeugte Hinweistöne in sechs Klangfamilien mit Auswahl je Ereignis. 383 Rust-Tests, 47 Frontend-Tests
 9. ✅ **Autostart, Single-Instance, Startverhalten** — Registry-Eintrag mit Marke, zweiter Start holt das Fenster vor, Fensterentscheidung rein und getestet. 378 Rust-Tests, 47 Frontend-Tests
 10. ✅ **Packaging und README** — MSI und NSIS gebaut, Silent-Install gegen den echten Rechner belegt, Lizenztexte im Paket, unsigniert. 380 Rust-Tests, 47 Frontend-Tests
+
+Nach Slice 10:
+
+- **Release über CI** — Tag löst Bau und Veröffentlichung aus, mit Prüfsummen (D87–D90)
+- **Toasts mit eigener Identität** — Name, Symbol und farbiges Zustandslogo statt „Windows PowerShell"; dabei ein Fehler in der Stufenzuordnung gefunden und behoben (D91–D97). 407 Rust-Tests, 47 Frontend-Tests
 
 ## Bei Unklarheit
 
