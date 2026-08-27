@@ -45,43 +45,70 @@ pub struct BuiltinSound {
     pub data: &'static [u8],
 }
 
+/// Bindet einen erzeugten Klang ein.
+///
+/// Der Dateiname wird aus der **Kennung abgeleitet**, nicht daneben
+/// geschrieben. Das schliesst eine ganze Fehlerklasse aus: ein Eintrag, der
+/// eine andere Datei einbindet als er behauptet, ist damit nicht mehr
+/// formulierbar. Und eine Kennung ohne passende Datei ist ein Compilerfehler
+/// statt eines Klangs, der stumm bleibt.
+macro_rules! klang {
+    ($id:literal, $label:literal) => {
+        BuiltinSound {
+            id: $id,
+            label: $label,
+            data: include_bytes!(concat!("../../sounds/", $id, ".wav")),
+        }
+    };
+}
+
 /// Alle eingebauten Klänge, in der Reihenfolge der Anzeige.
 ///
-/// Muss zu den Entwürfen in `scripts/make-sounds.mjs` passen. Ein Skript kann
-/// kein Rust lesen, deshalb prüft ein Test unten, dass jeder Eintrag ein
-/// plausibles WAV enthält — eine falsche Einbindung wäre sonst erst zur
-/// Laufzeit als Stille zu merken.
-pub const BUILTIN: [BuiltinSound; 6] = [
-    BuiltinSound {
-        id: "hinweis",
-        label: "Hinweis (zwei Töne, aufwärts)",
-        data: include_bytes!("../../sounds/hinweis.wav"),
-    },
-    BuiltinSound {
-        id: "warnung",
-        label: "Warnung (zwei Töne, abwärts)",
-        data: include_bytes!("../../sounds/warnung.wav"),
-    },
-    BuiltinSound {
-        id: "kritisch",
-        label: "Kritisch (drei Töne, abwärts)",
-        data: include_bytes!("../../sounds/kritisch.wav"),
-    },
-    BuiltinSound {
-        id: "alarm",
-        label: "Alarm (drei kurze, einer tief)",
-        data: include_bytes!("../../sounds/alarm.wav"),
-    },
-    BuiltinSound {
-        id: "entwarnung",
-        label: "Entwarnung (zwei Töne, aufwärts)",
-        data: include_bytes!("../../sounds/entwarnung.wav"),
-    },
-    BuiltinSound {
-        id: "bestaetigung",
-        label: "Bestätigung (zwei sehr kurze)",
-        data: include_bytes!("../../sounds/bestaetigung.wav"),
-    },
+/// Muss zu den Entwürfen in `scripts/make-sounds.mjs` passen — dort steht auch,
+/// was die Familien unterscheidet. Ein Skript kann kein Rust lesen, deshalb
+/// prüfen die Tests unten, dass jeder Eintrag ein plausibles, kurzes WAV
+/// enthält.
+///
+/// **Slice und nicht Array mit fester Länge:** die Liste wächst, und die Zahl
+/// im Typ wäre eine zweite Stelle, die bei jedem neuen Klang mitgeführt werden
+/// müsste.
+///
+/// Die ersten sechs Kennungen sind die der ersten Fassung. Sie bleiben
+/// unverändert, damit eine gespeicherte Auswahl weiter gilt.
+pub static BUILTIN: &[BuiltinSound] = &[
+    // ------------------------------------------------------------- Sinus --
+    klang!("hinweis", "Sinus · Hinweis (zwei Töne, aufwärts)"),
+    klang!("warnung", "Sinus · Warnung (zwei Töne, abwärts)"),
+    klang!("kritisch", "Sinus · Kritisch (drei Töne, abwärts)"),
+    klang!("alarm", "Sinus · Alarm (drei kurze, einer tief)"),
+    klang!("entwarnung", "Sinus · Entwarnung (zwei Töne, aufwärts)"),
+    klang!("bestaetigung", "Sinus · Bestätigung (zwei sehr kurze)"),
+    // ----------------------------------------------------------- Marimba --
+    klang!("marimba-hinweis", "Marimba · Hinweis (zwei Töne, aufwärts)"),
+    klang!("marimba-warnung", "Marimba · Warnung (zwei Töne, abwärts)"),
+    klang!(
+        "marimba-kritisch",
+        "Marimba · Kritisch (drei Töne, abwärts)"
+    ),
+    klang!("marimba-anschlag", "Marimba · Anschlag (ein Ton)"),
+    // ------------------------------------------------------------ Glocke --
+    klang!("glocke-hinweis", "Glocke · Hinweis (zwei Töne, aufwärts)"),
+    klang!("glocke-warnung", "Glocke · Warnung (zwei Töne, abwärts)"),
+    klang!("glocke-kritisch", "Glocke · Kritisch (drei Töne, abwärts)"),
+    klang!("glocke-einzeln", "Glocke · Einzelschlag (ein Ton)"),
+    // -------------------------------------------------------------- Blip --
+    klang!("blip-hinweis", "Blip · Hinweis (zwei Töne, aufwärts)"),
+    klang!("blip-warnung", "Blip · Warnung (zwei Töne, abwärts)"),
+    klang!("blip-kritisch", "Blip · Kritisch (drei Töne, abwärts)"),
+    klang!("blip-doppel", "Blip · Doppelklick (zwei gleiche)"),
+    // ----------------------------------------------------------- Tropfen --
+    klang!("tropfen-auf", "Tropfen · aufwärts (gleitend)"),
+    klang!("tropfen-ab", "Tropfen · abwärts (gleitend)"),
+    klang!("tropfen-doppel", "Tropfen · zwei gleitende"),
+    // ------------------------------------------------------------ Akkord --
+    klang!("akkord-hell", "Akkord · hell (Dur-Dreiklang)"),
+    klang!("akkord-dunkel", "Akkord · dunkel (Moll-Dreiklang)"),
+    klang!("akkord-warnung", "Akkord · Warnung (Dreiklang, dann tief)"),
 ];
 
 /// Sucht einen eingebauten Klang.
@@ -192,11 +219,15 @@ mod tests {
         assert_eq!(ids.len(), anzahl, "doppelte Kennung in BUILTIN");
     }
 
-    /// Der Test, der eine falsche Einbindung fängt: ein `include_bytes!` auf
-    /// die falsche Datei fällt sonst erst als Stille auf.
+    /// Prüft, dass jeder Eintrag ein gültiges WAV enthält.
+    ///
+    /// Dass die *richtige* Datei eingebunden ist, garantiert inzwischen das
+    /// `klang!`-Makro — es leitet den Pfad aus der Kennung ab. Was hier bleibt,
+    /// ist die Frage, ob die erzeugte Datei brauchbar ist: ein kaputter
+    /// WAV-Kopf fällt sonst erst als Stille auf.
     #[test]
     fn jeder_eingebaute_klang_ist_ein_plausibles_wav() {
-        for s in &BUILTIN {
+        for s in BUILTIN {
             assert!(s.data.len() > 1000, "{} ist verdächtig klein", s.id);
             assert_eq!(&s.data[0..4], b"RIFF", "{}: kein RIFF-Kopf", s.id);
             assert_eq!(&s.data[8..12], b"WAVE", "{}: kein WAVE", s.id);
@@ -210,15 +241,58 @@ mod tests {
     /// Sekunde — mehr als 400 ms wäre gegen die Absicht der Entwürfe.
     #[test]
     fn kein_eingebauter_klang_ist_zu_lang() {
-        for s in &BUILTIN {
+        for s in BUILTIN {
             let ms = ((s.data.len() - 44) as f64 / 44100.0) * 1000.0;
             assert!(ms <= 400.0, "{} dauert {ms:.0} ms", s.id);
         }
     }
 
+    /// Die Auswahl soll Vielfalt bieten, aber bedienbar bleiben: ein
+    /// Auswahlfeld mit hundert Einträgen wählt niemand mehr durch.
+    #[test]
+    fn die_auswahl_hat_eine_brauchbare_groesse() {
+        assert!(BUILTIN.len() >= 15, "zu wenig Auswahl: {}", BUILTIN.len());
+        assert!(
+            BUILTIN.len() <= 40,
+            "zu viel für ein Auswahlfeld: {}",
+            BUILTIN.len()
+        );
+    }
+
+    /// Jede Familie muss mindestens einen aufwärts- und einen abwärtsgerichteten
+    /// Klang haben — die Richtung trägt die Bedeutung, und sie soll in jeder
+    /// Klangfarbe verfügbar sein.
+    #[test]
+    fn jede_familie_ist_mit_mehreren_klaengen_vertreten() {
+        let mut familien: std::collections::BTreeMap<&str, usize> =
+            std::collections::BTreeMap::new();
+        for s in BUILTIN {
+            let familie = s.label.split(' ').next().unwrap_or("");
+            *familien.entry(familie).or_default() += 1;
+        }
+        assert!(familien.len() >= 5, "zu wenige Familien: {familien:?}");
+        for (familie, anzahl) in &familien {
+            assert!(*anzahl >= 3, "{familie} hat nur {anzahl} Klang/Klänge");
+        }
+    }
+
+    /// Die Beschriftung soll die Familie voranstellen, damit die Einträge im
+    /// Auswahlfeld gruppiert erscheinen.
+    #[test]
+    fn jedes_label_nennt_seine_familie_zuerst() {
+        for s in BUILTIN {
+            assert!(
+                s.label.contains(" · "),
+                "{}: Beschriftung ohne Familie — {}",
+                s.id,
+                s.label
+            );
+        }
+    }
+
     #[test]
     fn kein_label_ist_leer() {
-        for s in &BUILTIN {
+        for s in BUILTIN {
             assert!(!s.label.trim().is_empty(), "{} ohne Beschriftung", s.id);
         }
     }

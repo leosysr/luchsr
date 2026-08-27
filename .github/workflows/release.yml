@@ -1,0 +1,174 @@
+# Baut die Pakete und veröffentlicht sie als Release.
+#
+# Ausgelöst durch einen Tag `v1.2.3` — oder von Hand über „Run workflow".
+#
+# Warum überhaupt in CI und nicht von Hand hochgeladen: eine MSI, die auf einem
+# Entwicklungsrechner entsteht, ist nur so nachvollziehbar wie dieser Rechner.
+# Hier ist jeder Schritt aufgeschrieben, und der Build läuft auf einem frischen
+# System — damit ist belegt, dass das Repository für sich baut.
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  # Nötig, damit `gh release create` schreiben darf. Sonst nichts: der Token
+  # bekommt keine weiteren Rechte, als er für diese Aufgabe braucht.
+  contents: write
+
+jobs:
+  windows:
+    # Zielplattform ist ausschliesslich Windows — ein anderer Läufer könnte das
+    # Paket gar nicht bauen.
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      # Ohne Zwischenspeicher dauert der Rust-Build jedes Mal von vorn; mit ihm
+      # sind es Minuten statt einer Viertelstunde.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Abhängigkeiten
+        run: npm ci
+
+      # Der Tag und die Version in tauri.conf.json müssen übereinstimmen.
+      #
+      # Ohne diese Prüfung veröffentlicht ein falsch gesetzter Tag ein Paket,
+      # dessen Dateiname und Produktversion etwas anderes sagen als das Release —
+      # ein Fehler, der erst beim Installieren auffällt und dann schwer zu
+      # erklären ist. Die Version steht nur in tauri.conf.json (Single Source of
+      # Truth), also wird gegen sie geprüft.
+      - name: Tag gegen die Version prüfen
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $version = (Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).version
+          $tag = "${{ github.ref_name }}" -replace '^v', ''
+          Write-Output "tauri.conf.json: $version"
+          Write-Output "Tag:             $tag"
+          if ($version -ne $tag) {
+            Write-Error "Tag und Version stimmen nicht überein. Erst die Version in tauri.conf.json anheben, dann taggen."
+            exit 1
+          }
+
+      # Dieselbe Kette wie lokal. Ein Release soll nicht aus einem Stand
+      # entstehen, der die Prüfungen nicht besteht.
+      - name: Typen prüfen
+        run: npm run typecheck
+
+      - name: Frontend-Tests
+        run: npm test
+
+      - name: Formatierung
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
+
+      - name: Clippy
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --lib --all-targets -- -D warnings
+
+      - name: Rust-Tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml --lib
+
+      # Prüft, dass TLS über Schannel und damit den Windows-Zertifikatspeicher
+      # läuft. Mit rustls schlägt die Zertifikatsprüfung gegen eine interne CA
+      # fehl — ein Fehler, der erst beim Kunden auftritt. Deshalb hier.
+      - name: TLS-Weg belegen
+        shell: pwsh
+        run: |
+          $rustls = cargo tree --manifest-path src-tauri/Cargo.toml --invert rustls `
+            --edges normal --target x86_64-pc-windows-msvc 2>&1 | Out-String
+          if ($rustls -notmatch 'nothing to print') {
+            Write-Error "rustls ist im Windows-Build:`n$rustls"
+            exit 1
+          }
+          Write-Output "rustls nicht im Build - TLS laeuft ueber Schannel."
+
+      - name: Pakete bauen
+        run: npm run tauri build
+
+      # Prüfsummen statt Signatur.
+      #
+      # Die Pakete sind nicht codesigniert. Eine veröffentlichte Prüfsumme ist
+      # der Ersatz, der wenigstens beantwortet: ist die geladene Datei die, die
+      # hier gebaut wurde? Ohne sie hat ein Herunterladender keine Möglichkeit,
+      # das zu prüfen.
+      - name: Prüfsummen
+        shell: pwsh
+        run: |
+          $dateien = Get-ChildItem src-tauri/target/release/bundle -Recurse -Include *.msi, *-setup.exe
+          $zeilen = foreach ($d in $dateien) {
+            $h = (Get-FileHash $d.FullName -Algorithm SHA256).Hash.ToLower()
+            "$h  $($d.Name)"
+          }
+          $zeilen | Set-Content SHA256SUMS.txt -Encoding utf8
+          Get-Content SHA256SUMS.txt
+
+      # `gh` ist auf den GitHub-Läufern vorinstalliert. Bewusst statt einer
+      # Fremd-Action: für „Datei an ein Release hängen" eine Abhängigkeit
+      # einzukaufen, die Schreibrechte auf das Repository bekommt, ist ein
+      # schlechter Tausch.
+      # Nur bei einem Tag. Ein manueller Lauf lädt die Pakete als Artefakt hoch
+      # (Schritt darunter) und legt bewusst **kein** Release an — sonst füllt
+      # sich die Release-Liste mit Testbauten, und die Frage „welches ist die
+      # richtige Fassung" ist genau die, die ein Release beantworten soll.
+      - name: Release veröffentlichen
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        shell: pwsh
+        run: |
+          # Notizen aus einer Datei statt als Argument: eine mehrzeilige
+          # Zeichenkette über die Kommandozeile zu schieben, ist die Stelle, an
+          # der Anführungszeichen und Zeilenumbrüche kaputtgehen.
+          $notizen = @'
+          Windows 11 x64.
+
+          Installation, Einrichtung und Fehlersuche: siehe README im Repository.
+
+          Installiert **per Machine** nach `%ProgramFiles%\Luchsr`. Der Silent-Install
+          `msiexec /i <datei>.msi /qn` braucht einen erhöhten Kontext — über
+          Softwaremanagement läuft er als SYSTEM, interaktiv kommt eine UAC-Abfrage.
+
+          **Nicht codesigniert.** Windows zeigt beim interaktiven Installieren einen
+          SmartScreen-Hinweis. Die Prüfsummen in `SHA256SUMS.txt` erlauben es, eine
+          geladene Datei gegen diesen Build zu prüfen.
+          '@
+          Set-Content RELEASE_NOTES.md -Value $notizen -Encoding utf8
+
+          $dateien = Get-ChildItem src-tauri/target/release/bundle -Recurse -Include *.msi, *-setup.exe |
+            ForEach-Object { $_.FullName }
+          $dateien += (Resolve-Path SHA256SUMS.txt).Path
+
+          # Argumentliste als Array und mit dem Aufrufoperator: PowerShell
+          # übergibt die Elemente einzeln. `@`-Splatting an ein natives Programm
+          # verhält sich zwischen den PowerShell-Fassungen unterschiedlich.
+          $argumente = @(
+            'release', 'create', $env:TAG,
+            '--title', "Luchsr $env:TAG",
+            '--notes-file', 'RELEASE_NOTES.md'
+          ) + $dateien
+
+          & gh $argumente
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      # Auch ohne Release abrufbar, etwa für einen Testbau aus einem Zweig.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: luchsr-pakete
+          path: |
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/nsis/*-setup.exe
+            SHA256SUMS.txt

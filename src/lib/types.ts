@@ -83,6 +83,12 @@ export type SoundChoice =
   | { kind: "builtin"; id: string }
   | { kind: "file"; path: string };
 
+/** Version und Projektadresse, für die Fusszeile. */
+export interface AboutInfo {
+  version: string;
+  projectUrl: string;
+}
+
 /** Ein eingebauter Klang, wie das Backend ihn meldet. */
 export interface BuiltinSoundInfo {
   id: string;

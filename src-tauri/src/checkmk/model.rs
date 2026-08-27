@@ -118,10 +118,13 @@ pub enum ProblemState {
 impl ProblemState {
     /// Schwere für die Sortierung. Höher ist schlimmer.
     ///
-    /// Reihenfolge nach Nagstamon-Konvention: ein ausgefallener Host schlägt
-    /// jeden Serviceausfall, CRIT schlägt UNKNOWN. Die Zahlen entsprechen den
-    /// `severity`-Werten in `src/lib/status.ts`, damit Backend und Frontend
-    /// dieselbe Ordnung verwenden.
+    /// Ein ausgefallener Host schlägt jeden Serviceausfall, CRIT schlägt
+    /// UNKNOWN. Begründung: ist der Host weg, ist jede Aussage über seine
+    /// Services wertlos — und „der Check funktioniert nicht" (UNKNOWN) ist
+    /// weniger dringend als „der Dienst ist kaputt" (CRIT).
+    ///
+    /// Die Zahlen entsprechen den `severity`-Werten in `src/lib/status.ts`,
+    /// damit Backend und Frontend dieselbe Ordnung verwenden.
     pub fn severity(self) -> u8 {
         match self {
             Self::Down => 50,

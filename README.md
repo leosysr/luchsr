@@ -1,12 +1,29 @@
 # Luchsr
 
-CheckMK-Statusmeldungen im Windows-Infobereich. Eine schlanke Alternative zu
-Nagstamon — bewusst **nur** CheckMK, kein Multi-Backend.
+**CheckMK-Statusmeldungen im Windows-Infobereich.** Ein Tray-Icon zeigt die
+schlimmste offene Meldung als Farbe; ein Klick öffnet die Problemliste, ohne den
+Browser zu bemühen.
 
-Zielplattform ist ausschliesslich **Windows 11 x64**.
+Bewusst **nur** CheckMK, kein Multi-Backend. Die Beschränkung ist Absicht: sie
+hält das Werkzeug klein und die Fehlermeldungen konkret. Zielplattform ist
+ausschliesslich **Windows 11 x64** — es gibt keinen Cross-Platform-Code, und die
+plattformnahen Wege (Credential Manager, Schannel, Infobereich) sind direkt
+genutzt statt abstrahiert.
 
-Von Nagstamon ist keine Zeile übernommen; Luchsr ist eine eigenständige
-Neuentwicklung und steht unter der MIT-Lizenz (siehe `LICENSE`).
+Eine eigenständige Neuentwicklung unter der **MIT-Lizenz** (siehe `LICENSE`); es
+ist keine Zeile fremden Quelltexts übernommen.
+
+> **Entstanden mit KI.** Entwürfe, Quelltext und Tests sind im Dialog mit
+> Claude (Anthropic) entstanden. Auftrag, Entscheidungen und Prüfung liegen
+> beim Autor. `CLAUDE.md` führt das vollständige Entscheidungslog — einschliesslich
+> der Stellen, an denen sich eine frühere Entscheidung als falsch erwies.
+
+## Herunterladen
+
+Fertige Pakete liegen unter [Releases](../../releases): die **MSI** ist das
+Hauptziel, das NSIS-Paket der Rückfall. Beide sind derzeit **nicht
+codesigniert** — Windows zeigt beim interaktiven Installieren einen
+SmartScreen-Hinweis.
 
 ## Was es tut
 
@@ -27,19 +44,21 @@ CheckMK, Graphen und Historie, mehrere Instanzen gleichzeitig, Auto-Update.
 
 ## Installation
 
-Aus `src-tauri/target/release/bundle/` — die MSI ist das Hauptziel, das
-NSIS-Paket der Rückfall.
+MSI aus den [Releases](../../releases) laden, oder nach einem eigenen Build aus
+`src-tauri/target/release/bundle/msi/`.
 
 ```bash
-msiexec /i Luchsr_1.0.0_x64_de-DE.msi /qn
+msiexec /i Luchsr_1.1.0_x64_de-DE.msi /qn
 ```
 
 Installiert **per Machine** nach `%ProgramFiles%\Luchsr`. Die Upgrade-GUID ist
 fest, ein Update läuft also in-place; ein Downgrade wird abgelehnt.
 
-Die Pakete sind derzeit **nicht codesigniert** — Windows zeigt beim
-interaktiven Installieren einen SmartScreen-Hinweis. Bei einer Verteilung über
-Softwaremanagement fällt das nicht an. Zum Signieren siehe unten.
+`/qn` braucht einen **erhöhten Kontext**: eine Per-Machine-Installation bricht
+als normaler Benutzer mit `1925 / 1603` ab. Über Softwaremanagement läuft es als
+SYSTEM und damit problemlos; interaktiv kommt eine UAC-Abfrage.
+
+Zum Signieren siehe unten.
 
 ### Voraussetzungen auf dem Zielrechner
 
@@ -137,6 +156,25 @@ npm run tauri build
 
 Voraussetzungen: Rust `stable-x86_64-pc-windows-msvc`, VS Build Tools mit
 C++-Workload, Node.js LTS, WebView2-Runtime.
+
+### Ein Release veröffentlichen
+
+`.github/workflows/release.yml` baut auf einem frischen Windows-Läufer und hängt
+MSI, NSIS-Paket und `SHA256SUMS.txt` an ein Release. Ausgelöst wird es durch
+einen Tag:
+
+```bash
+git tag v1.1.0
+git push origin v1.1.0
+```
+
+Der Tag muss zur `version` in `src-tauri/tauri.conf.json` passen — der Workflow
+bricht sonst ab, bevor er baut. Sonst entstünde ein Release, dessen Dateiname
+und Produktversion etwas anderes sagen als der Tag.
+
+Ein manueller Lauf über „Run workflow" baut ebenfalls, legt aber **kein** Release
+an: die Pakete hängen dann als Artefakt am Lauf. So füllt sich die Release-Liste
+nicht mit Testbauten.
 
 ### Prüfen
 

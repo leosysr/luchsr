@@ -480,6 +480,53 @@ pub fn open_in_checkmk(
 }
 
 /* -------------------------------------------------------------------------- */
+/* Über das Programm                                                          */
+/* -------------------------------------------------------------------------- */
+
+/// Adresse des Quelltexts.
+///
+/// **Fest verdrahtet, mit Absicht.** Es gibt bewusst keinen Befehl, der eine
+/// beliebige URL öffnet: das wäre eine Stelle, an der ein Fehler im Frontend
+/// oder eine untergeschobene Zeichenkette den Standardbrowser auf etwas
+/// Beliebiges lenken könnte. Für den einen Link, den die Fusszeile braucht,
+/// genügt eine Konstante.
+pub const PROJECT_URL: &str = "https://github.com/leosysr/luchsr";
+
+/// Angaben für die Fusszeile.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AboutInfo {
+    /// Aus `tauri.conf.json`, der einzigen Stelle mit der Version.
+    pub version: String,
+    pub project_url: String,
+}
+
+/// Version und Projektadresse.
+///
+/// Die Version kommt aus dem Paket und nicht aus dem Frontend — sie steht
+/// ausschliesslich in `tauri.conf.json`, und sie dort **und** im Frontend zu
+/// pflegen wären zwei Wahrheiten, die beim nächsten Release auseinanderlaufen.
+#[tauri::command]
+pub fn about_info(app: tauri::AppHandle) -> AboutInfo {
+    AboutInfo {
+        version: app.package_info().version.to_string(),
+        project_url: PROJECT_URL.to_owned(),
+    }
+}
+
+/// Öffnet die Projektseite im Standardbrowser.
+///
+/// Ohne Parameter — siehe [`PROJECT_URL`].
+#[tauri::command]
+pub fn open_project_page() -> CommandResult<()> {
+    tauri_plugin_opener::open_url(PROJECT_URL, None::<&str>).map_err(|error| {
+        CommandError::plain(format!(
+            "Der Browser liess sich nicht öffnen: {error}. Die Adresse ist: {PROJECT_URL}"
+        ))
+    })
+}
+
+/* -------------------------------------------------------------------------- */
 /* Klänge                                                                     */
 /* -------------------------------------------------------------------------- */
 
@@ -1186,6 +1233,8 @@ mod tests {
             "set_downtime",
             "builtin_sounds",
             "play_sound",
+            "about_info",
+            "open_project_page",
         ];
 
         // Jeder erwartete Befehl ist registriert.

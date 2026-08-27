@@ -33,8 +33,12 @@ export interface StatusMeta {
   readonly short: string;
   readonly icon: LucideIcon;
   /**
-   * Sortierordnung, höher ist schlimmer. Reihenfolge nach Nagstamon-
-   * Konvention: Host DOWN schlägt CRIT, CRIT schlägt UNKNOWN.
+   * Sortierordnung, höher ist schlimmer: Host DOWN schlägt CRIT, CRIT schlägt
+   * UNKNOWN.
+   *
+   * Die Begründung für diese Reihenfolge: ein ausgefallener Host macht jede
+   * Aussage über seine Services wertlos, und „der Check funktioniert nicht"
+   * (UNKNOWN) ist weniger dringend als „der Dienst ist kaputt" (CRIT).
    */
   readonly severity: number;
   /** Vordergrundfarbe als Tailwind-Klasse. */

@@ -17,6 +17,12 @@ export const de = {
   "app.renderFailedHint":
     "Der Fehler steht im Protokoll unter %LOCALAPPDATA%\\de.leosysr.luchsr\\logs.",
 
+  // ------------------------------------------------ Über das Programm --
+  "about.author": "Fabian Schatto – leosysr",
+  "about.license": "MIT-Lizenz",
+  "about.ai":
+    "Entwickelt mit Claude von Anthropic. Entwürfe, Quelltext und Tests entstanden im Dialog mit einem KI-Modell; Auftrag, Entscheidungen und Prüfung liegen beim Autor.",
+
   // ---------------------------------------------------------------- Status --
   "status.ok": "OK",
   "status.warn": "Warnung",
