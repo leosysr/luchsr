@@ -25,6 +25,7 @@ import type {
   Settings,
   SoundChoice,
   StatusPayload,
+  UpdateReport,
   ValidationIssue,
   WriteAction,
 } from "./types";
@@ -320,4 +321,25 @@ export function setPinPopup(pinned: boolean): Promise<void> {
  */
 export function hidePopup(): Promise<void> {
   return invoke<void>("hide_popup");
+}
+
+/**
+ * Sieht nach, ob es eine neuere Fassung gibt.
+ *
+ * Nur auf Klick — kein Hintergrundverkehr. Begründung im Kopf von
+ * `src-tauri/src/update/mod.rs`.
+ */
+export function checkForUpdate(): Promise<UpdateReport> {
+  return invoke<UpdateReport>("check_for_update");
+}
+
+/**
+ * Öffnet die Seite eines Releases.
+ *
+ * Die Adresse kommt aus der GitHub-Antwort und wird im Backend geprüft, bevor
+ * sie an den Browser geht — ein Befehl, der jede Zeichenkette öffnet, wäre
+ * genau die Stelle, die `openProjectPage` vermeidet.
+ */
+export function openReleasePage(url: string): Promise<void> {
+  return invoke<void>("open_release_page", { url });
 }

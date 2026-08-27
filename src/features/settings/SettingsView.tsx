@@ -22,6 +22,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { error as logError } from "@tauri-apps/plugin-log";
 import {
   KeyRound,
   Moon,
@@ -144,7 +145,12 @@ export function SettingsView({ mode, initial, onSaved }: SettingsViewProps) {
   useEffect(() => {
     builtinSounds()
       .then(setBuiltins)
-      .catch(() => undefined);
+      // Kein Fehler im Dialog, aber eine Zeile im Protokoll: eine Klangliste,
+      // die nur „Kein Ton" enthält, sieht wie eine Einstellung aus und ist ein
+      // Fehlschlag. Ohne Spur wäre das nicht zu unterscheiden.
+      .catch((raw: unknown) => {
+        void logError(`Klangliste nicht abrufbar: ${String(raw)}`);
+      });
   }, []);
 
   const connection: Connection =

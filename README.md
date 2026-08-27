@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/bilder/banner.png" alt="Luchsr" width="820">
+</p>
+
 # Luchsr
 
 **CheckMK-Statusmeldungen im Windows-Infobereich.** Ein Tray-Icon zeigt die
@@ -29,8 +33,10 @@ SmartScreen-Hinweis.
 
 * Ein Tray-Icon, das die schlimmste offene Meldung als Farbe zeigt — sechs
   Zustände, bei 16 px unterscheidbar.
-* Ein rahmenloses Popup am Infobereich mit der Problemliste: nach Host
-  gruppiert, virtualisiert, brauchbar bei 80 gleichzeitigen Problemen.
+* Ein rahmenloses Popup am Infobereich mit der Problemliste, virtualisiert und
+  brauchbar bei 80 gleichzeitigen Problemen. Ist ein **Host selbst ausgefallen**,
+  klappen seine Dienste unter ihm zusammen — ihre Meldungen sind dann Folge und
+  nicht eigener Befund.
 * Filter nach Freitext und Statusklasse, Detailansicht mit vollständiger
   `plugin_output`.
 * **Quittieren** und **Wartungszeit setzen**, beides einzeln freizugeben und
@@ -39,9 +45,50 @@ SmartScreen-Hinweis.
   einem Zustandslogo in der Farbe des Tray-Icons, dazu kurze Hinweistöne: ein
   Klang je Ereignis, jeder abschaltbar.
 * CSV-Export der vollständigen Liste.
+* Ein Knopf in den Einstellungen sagt, ob es eine neuere Fassung gibt —
+  gefragt wird nur auf Klick, installiert wird nicht automatisch.
 
 Nicht Teil des Projekts: andere Monitoring-Backends, Konfigurationsänderungen an
 CheckMK, Graphen und Historie, mehrere Instanzen gleichzeitig, Auto-Update.
+
+### Die sechs Zustände
+
+Das sind die ausgelieferten Icons, nicht Nachbildungen — dieselben Dateien, die
+im Infobereich landen.
+
+| Icon | Zustand | Bedeutung |
+|:---:|---|---|
+| <img src="src-tauri/icons/tray/down-32.png" width="22" alt="DOWN"> | **DOWN** | Der Host antwortet nicht. Schlägt alles andere: ist der Host weg, ist jede Aussage über seine Dienste wertlos. |
+| <img src="src-tauri/icons/tray/crit-32.png" width="22" alt="CRIT"> | **CRIT** | Ein Dienst ist kaputt. |
+| <img src="src-tauri/icons/tray/unknown-32.png" width="22" alt="UNKNOWN"> | **UNKNOWN** | Der Check selbst funktioniert nicht — ein anderer Fehlertyp als ein kaputter Dienst, und ein weniger dringender. |
+| <img src="src-tauri/icons/tray/warn-32.png" width="22" alt="WARN"> | **WARN** | Ein Schwellwert ist überschritten. |
+| <img src="src-tauri/icons/tray/ok-32.png" width="22" alt="OK"> | **OK** | Nichts offen. Quittierte Probleme und geplante Wartung zählen dazu. |
+| <img src="src-tauri/icons/tray/disconnected-32.png" width="22" alt="Getrennt"> | **Getrennt** | Der Server antwortet nicht. **Nie grün** — ein grünes Icon, während der Server nicht erreichbar ist, sieht aus wie „alles in Ordnung" und ist die schlimmste Fehlinformation, die dieses Programm liefern kann. |
+
+Die Farbtöne liegen mindestens 16° auseinander, weil bei einer 16-px-Fläche
+allein der Farbton entscheidet und nicht die Helligkeit. In der Liste und in den
+Benachrichtigungen kommt zu jeder Farbe ein Symbol und ein Kürzel: Status wird
+nie allein über Farbe kodiert.
+
+### So sieht es aus
+
+<img src="docs/bilder/popup-problemliste.png" alt="Problemliste im Popup" width="780">
+
+Das Popup in seiner echten Grösse, 780 × 600. `sw-core-02` ist selbst
+ausgefallen, seine beiden Dienste sind unter ihm zusammengeklappt. Der
+durchgestrichene Augen-Knopf rechts zeigt an, dass ein bearbeitetes Problem
+ausgeblendet ist — quittierte und geplante verschwinden nicht, sie stehen nur
+nicht im Weg.
+
+<img src="docs/bilder/popup-einstellungen.png" alt="Klangauswahl in den Einstellungen" width="780">
+
+Ein Klang je Ereignis, jeder abschaltbar; das Dreieck spielt ihn vor. Steht ein
+Ereignis auf „Kein Ton", ist das Dreieck ausgegraut — ein Knopf, der stumm
+nichts tut, liest sich sonst wie ein Fehler.
+
+> Die Bilder zeigen die **echte Oberfläche** mit erfundenen Daten: gerendert
+> wurde die ausgelieferte Anwendung, nur die Antworten des Backends waren
+> vorbereitet. Hosts und Meldungen sind erdacht, keine reale Umgebung.
 
 ## Installation
 
@@ -49,7 +96,7 @@ MSI aus den [Releases](../../releases) laden, oder nach einem eigenen Build aus
 `src-tauri/target/release/bundle/msi/`.
 
 ```bash
-msiexec /i Luchsr_1.2.0_x64_de-DE.msi /qn
+msiexec /i Luchsr_1.3.0_x64_de-DE.msi /qn
 ```
 
 Installiert **per Machine** nach `%ProgramFiles%\Luchsr`. Die Upgrade-GUID ist
@@ -143,6 +190,19 @@ saubere Weg ist, das Stammzertifikat der internen CA dort aufzunehmen. Die
 TLS-Prüfung abzuschalten ist möglich, aber eine Notlösung — der Dialog warnt
 deutlich.
 
+**„Nach Updates suchen" scheitert.** Der Knopf fragt `api.github.com`, also einen
+Host im Internet — im Firmennetz führt der Weg dorthin womöglich über einen
+Proxy, den Luchsr nicht kennt. Anders als beim CheckMK-Server nutzt der
+Update-Check **immer** den Systemproxy aus den Umgebungsvariablen: für ein Ziel
+im Internet ist das die richtige Quelle. Die Meldung nennt die Ursache; ein
+Fehlschlag hier wirkt sich auf nichts anderes aus. Die Einstellung „TLS-Prüfung
+aus" gilt der internen CA und schlägt hier **nicht** durch — gegen GitHub wird
+immer geprüft.
+
+Kommt „Das Anfragelimit von GitHub ist erreicht": unangemeldet sind es 60
+Anfragen je Stunde und IP-Adresse, geteilt mit allen Rechnern hinter derselben
+Adresse. Nach einer Stunde geht es wieder.
+
 **Kein Hinweiston.** Er kann nur WAV. Eine MP3 ergibt keinen Fehler, sondern
 Stille; die Einstellungsprüfung warnt in diesem Fall. Ausserdem klingt je Runde
 nur **ein** Ton, und nur für die dringlichste Stufe — steht die auf „kein Ton",
@@ -165,8 +225,8 @@ MSI, NSIS-Paket und `SHA256SUMS.txt` an ein Release. Ausgelöst wird es durch
 einen Tag:
 
 ```bash
-git tag v1.2.0
-git push origin v1.2.0
+git tag v1.3.0
+git push origin v1.3.0
 ```
 
 Der Tag muss zur `version` in `src-tauri/tauri.conf.json` passen — der Workflow
@@ -201,13 +261,33 @@ Gegenprobe mit `--invert rustls` muss „nothing to print" ergeben.
 
 ### Erzeugte Dateien
 
-Zwei Dinge im Baum werden erzeugt und **nicht von Hand bearbeitet**:
+Vier Dinge im Baum werden erzeugt und **nicht von Hand bearbeitet**:
 
 ```bash
-node scripts/make-icons.mjs      # Icons aus scripts/mark.mjs
+node scripts/make-icons.mjs      # Icons und README-Banner aus scripts/mark.mjs
 node scripts/make-sounds.mjs     # Hinweistöne nach src-tauri/sounds/
 pwsh -File scripts/third-party.ps1   # THIRD-PARTY.md aus den Abhängigkeiten
 ```
+
+Die Bilder der Oberfläche brauchen einen laufenden Dev-Server, deshalb zwei
+Schritte:
+
+```bash
+npm run dev
+```
+
+```bash
+pwsh -File scripts/screenshots.ps1
+```
+
+Aufgenommen wird die **echte Anwendung** — `src/dev/mockup.tsx` rendert `App`
+und fälscht nur die Antworten des Backends. Ein nachgemaltes Bild wäre eine
+zweite Wahrheit, die beim nächsten Umbau falsch wird, ohne dass es jemand
+merkt: ein Bild kompiliert nicht. Die Beispieldaten sind getypt, `npm run
+typecheck` fängt eine Schemaänderung also mit.
+
+`mockup.html` landet **nicht** im Auslieferungsbau: Vites Vorgabe für `build`
+ist allein `index.html`. Nachgeprüft an `dist/`, nicht angenommen.
 
 ### Codesignatur
 

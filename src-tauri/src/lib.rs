@@ -28,6 +28,7 @@ pub mod notify;
 pub mod poll;
 pub mod startup;
 pub mod tray;
+pub mod update;
 
 use commands::AppState;
 use tauri::Manager;
@@ -166,6 +167,8 @@ pub fn run() {
             commands::play_sound,
             commands::about_info,
             commands::open_project_page,
+            commands::open_release_page,
+            commands::check_for_update,
         ])
         .run(tauri::generate_context!())
         .expect("Luchsr konnte nicht gestartet werden");
