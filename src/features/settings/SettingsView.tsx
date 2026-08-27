@@ -58,6 +58,7 @@ import {
 } from "@/lib/api";
 import { applyTheme } from "@/lib/theme";
 import { t } from "@/i18n";
+import { Colophon } from "./Colophon";
 import { SoundPicker } from "./SoundPicker";
 import type {
   BuiltinSoundInfo,
@@ -816,6 +817,8 @@ export function SettingsView({ mode, initial, onSaved }: SettingsViewProps) {
           </Card>
         </>
       ) : null}
+
+      <Colophon />
 
       {/* ================================================== Fusszeile ==== */}
       {saveError ? (

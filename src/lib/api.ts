@@ -15,6 +15,7 @@ import { listen } from "@tauri-apps/api/event";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 
 import type {
+  AboutInfo,
   BuiltinSoundInfo,
   CommandError,
   Connection,
@@ -205,6 +206,25 @@ export function openInCheckmk(
  */
 export function exportCsv(): Promise<string | null> {
   return invoke<string | null>("export_csv");
+}
+
+/* -------------------------------------------------------------------------- */
+/* Über das Programm                                                          */
+/* -------------------------------------------------------------------------- */
+
+/** Version aus tauri.conf.json und die Projektadresse. */
+export function aboutInfo(): Promise<AboutInfo> {
+  return invoke<AboutInfo>("about_info");
+}
+
+/**
+ * Öffnet die Projektseite im Standardbrowser.
+ *
+ * Ohne Parameter: die Adresse steht als Konstante im Backend. Es gibt bewusst
+ * keinen Befehl, der eine beliebige URL öffnet.
+ */
+export function openProjectPage(): Promise<void> {
+  return invoke<void>("open_project_page");
 }
 
 /* -------------------------------------------------------------------------- */

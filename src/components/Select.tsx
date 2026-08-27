@@ -13,6 +13,20 @@ import { ChevronDown } from "lucide-react";
 export interface SelectOption<T extends string> {
   value: T;
   label: string;
+  /**
+   * Überschrift, unter der der Eintrag einsortiert wird.
+   *
+   * Fehlt sie, steht der Eintrag ungruppiert oben — so bleibt „Kein Ton" vor
+   * allen Gruppen. Aufeinanderfolgende Einträge mit derselben Gruppe landen in
+   * einem `<optgroup>`; die Reihenfolge des Feldes bestimmt also die
+   * Reihenfolge der Gruppen. Bei 25 Klängen ist das der Unterschied zwischen
+   * einer Liste, die man durchsucht, und einer, die man liest.
+   *
+   * `| undefined` ausdrücklich, wie bei [`FieldProps`]: `exactOptionalPropertyTypes`
+   * ist aktiv, und die Aufrufstelle berechnet den Wert. Ohne das müsste sie die
+   * Eigenschaft bedingt weglassen, was den Aufruf unlesbar macht.
+   */
+  group?: string | undefined;
 }
 
 interface SelectProps<T extends string>
@@ -21,6 +35,25 @@ interface SelectProps<T extends string>
   options: readonly SelectOption<T>[];
   onValueChange: (value: T) => void;
   invalid?: boolean;
+}
+
+/**
+ * Fasst aufeinanderfolgende Einträge gleicher Gruppe zusammen.
+ *
+ * Bewusst nur **aufeinanderfolgende**: dann bestimmt die Reihenfolge des
+ * Aufrufers die Reihenfolge der Gruppen, und es gibt keine zweite, verborgene
+ * Sortierregel. Wer gruppiert übergeben will, übergibt gruppiert.
+ */
+function gruppieren<T extends string>(
+  options: readonly SelectOption<T>[],
+): { group: string | undefined; items: SelectOption<T>[] }[] {
+  const blocks: { group: string | undefined; items: SelectOption<T>[] }[] = [];
+  for (const option of options) {
+    const letzter = blocks[blocks.length - 1];
+    if (letzter && letzter.group === option.group) letzter.items.push(option);
+    else blocks.push({ group: option.group, items: [option] });
+  }
+  return blocks;
 }
 
 export function Select<T extends string>({
@@ -50,11 +83,23 @@ export function Select<T extends string>({
         ].join(" ")}
         {...rest}
       >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
+        {gruppieren(options).map((block) =>
+          block.group === undefined ? (
+            block.items.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))
+          ) : (
+            <optgroup key={block.group} label={block.group}>
+              {block.items.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </optgroup>
+          ),
+        )}
       </select>
       <ChevronDown
         size={18}

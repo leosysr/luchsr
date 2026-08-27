@@ -159,6 +159,8 @@ pub fn run() {
             commands::set_downtime,
             commands::builtin_sounds,
             commands::play_sound,
+            commands::about_info,
+            commands::open_project_page,
         ])
         .run(tauri::generate_context!())
         .expect("Luchsr konnte nicht gestartet werden");

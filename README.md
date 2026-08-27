@@ -8,6 +8,11 @@ Zielplattform ist ausschliesslich **Windows 11 x64**.
 Von Nagstamon ist keine Zeile übernommen; Luchsr ist eine eigenständige
 Neuentwicklung und steht unter der MIT-Lizenz (siehe `LICENSE`).
 
+> **Entstanden mit KI.** Entwürfe, Quelltext und Tests sind im Dialog mit
+> Claude (Anthropic) entstanden. Auftrag, Entscheidungen und Prüfung liegen
+> beim Autor. `CLAUDE.md` führt das vollständige Entscheidungslog — einschliesslich
+> der Stellen, an denen sich eine frühere Entscheidung als falsch erwies.
+
 ## Was es tut
 
 * Ein Tray-Icon, das die schlimmste offene Meldung als Farbe zeigt — sechs
